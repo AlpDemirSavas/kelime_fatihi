@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "672830071766",
+    "project_id": "kelime-fatihi-cd8ca",
+    "storage_bucket": "kelime-fatihi-cd8ca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:672830071766:android:1e691485f567de8ef3ba77",
+        "android_client_info": {
+          "package_name": "com.example.kelime_fatihi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8mLJKD7HN222kbQJH2wRLABxDsaFmpEk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

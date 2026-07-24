@@ -32,3 +32,12 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Apple / release secrets
+*.p8
+*.p12
+*.mobileprovision
+
+# Local environment secrets
+.env
+.env.*

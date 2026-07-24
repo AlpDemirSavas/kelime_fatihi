@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Apple / release secrets
+*.p8
+*.p12
+*.mobileprovision
+
+# Local environment secrets
+.env
+.env.*

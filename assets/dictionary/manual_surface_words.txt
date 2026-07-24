@@ -1,0 +1,2 @@
+# Yalnızca sözlük başlığı olmayan, ayrıca elle onaylanmış yüzey biçimleri.
+# V6: zaman/kip çekimleri burada tutulmaz. Şimdilik ek istisna yok.

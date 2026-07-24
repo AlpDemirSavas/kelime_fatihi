@@ -1,0 +1,13 @@
+KELİME FATİHİ V6 PATCH
+
+1) Bu ZIP içindeki kelime_fatihi klasörünün içeriğini mevcut proje klasörünün üzerine kopyalayın.
+2) Dosyaları değiştir/Replace seçin.
+3) Mevcut android/ ve ios/ klasörleriniz patch tarafından silinmez.
+4) Terminal:
+   flutter clean
+   flutter pub get
+   flutter analyze
+   flutter test
+   flutter run -d emulator-5554
+
+V6 ana farkı: zaman/kip çekimleri oyun kelimesi olarak üretilmez; bölüm hedef havuzu 23.376 gerçek/incelemeden geçmiş kelimeye genişletildi ve geç seviyelerde 8-9 harfli çemberler eklendi.

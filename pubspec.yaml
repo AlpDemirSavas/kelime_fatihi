@@ -1,0 +1,47 @@
+name: kelime_fatihi
+description: Kelime Fatihi - Türkçe günlük kelime ve sonsuz kelime fetih oyunu.
+publish_to: 'none'
+version: 1.5.0+8
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_mobile_ads: ^9.0.0
+  in_app_purchase: ^3.3.0
+  shared_preferences: ^2.5.5
+  audioplayers: ^6.8.1
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  cloud_firestore: ^6.7.1
+  google_sign_in: ^7.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/dictionary/core_words.txt
+    - assets/dictionary/daily_words.txt
+    - assets/dictionary/play_words.txt
+    - assets/dictionary/level_words.txt
+    - assets/dictionary/level_seeds.txt
+    - assets/dictionary/manual_surface_words.txt
+    - assets/dictionary/reviewed_expansion_words.txt
+    - assets/dictionary/blocked_words.txt
+    - assets/audio/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/icon_1024.png
+  adaptive_icon_background: "#07111F"
+  adaptive_icon_foreground: assets/branding/icon_foreground.png
+  remove_alpha_ios: true

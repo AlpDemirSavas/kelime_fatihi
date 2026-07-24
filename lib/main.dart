@@ -1,0 +1,78 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'controllers/game_controller.dart';
+import 'core/game_theme.dart';
+import 'firebase_options.dart';
+import 'screens/home_screen.dart';
+import 'services/account_service.dart';
+import 'services/ad_service.dart';
+import 'services/audio_service.dart';
+import 'services/dictionary_service.dart';
+import 'services/purchase_service.dart';
+import 'services/storage_service.dart';
+import 'widgets/game_scope.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  var firebaseReady = false;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    firebaseReady = true;
+  } catch (_) {
+    // Firebase yapılandırılmadan da oyun tamamen offline/local çalışır.
+    // `flutterfire configure` tamamlandığında bu blok otomatik olarak gerçek
+    // Firebase seçenekleriyle çalışmaya başlar.
+  }
+
+  final controller = GameController(
+    dictionary: DictionaryService(),
+    storage: StorageService(),
+    ads: AdService(),
+    purchases: PurchaseService(),
+    audio: AudioService(),
+    account: AccountService(firebaseReady: firebaseReady),
+  );
+  runApp(KelimeFatihiApp(controller: controller));
+  controller.initialize();
+}
+
+class KelimeFatihiApp extends StatefulWidget {
+  const KelimeFatihiApp({super.key, required this.controller});
+  final GameController controller;
+
+  @override
+  State<KelimeFatihiApp> createState() => _KelimeFatihiAppState();
+}
+
+class _KelimeFatihiAppState extends State<KelimeFatihiApp> {
+  @override
+  void dispose() {
+    widget.controller.ads.dispose();
+    widget.controller.purchases.dispose();
+    widget.controller.account.dispose();
+    unawaited(widget.controller.audio.dispose());
+    widget.controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GameScope(
+      controller: widget.controller,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Kelime Fatihi',
+        theme: GameTheme.build(),
+        home: const HomeScreen(),
+      ),
+    );
+  }
+}

@@ -1,0 +1,29 @@
+# Third-Party Notices
+
+## Zemberek-NLP Turkish lexical data
+
+Kelime Fatihi V6'nın ana çevrimdışı sözlüğü Zemberek-NLP `master-dictionary.dict` girdilerinden türetilmiştir.
+
+- Project: Zemberek-NLP
+- Repository: https://github.com/ahmetaa/zemberek-nlp
+- Copyright: 2018 Ahmet A. Akın, Mehmet D. Akın
+- License: Apache License 2.0
+
+Özel ad/kısaltma/noktalama girdileri oyun havuzundan çıkarılır. Fiil infinitifleri hedef olarak kullanılmaz; yalnızca yalın emir/kök biçimi kullanılabilir. Otomatik zaman/kip, iyelik, hâl veya fiilimsi üretimi yapılmaz.
+
+Lisans metinleri: `licenses/APACHE-2.0.txt` ve `licenses/ZEMBEREK_LICENSE.txt`.
+
+## Turkish Hunspell reviewed additions
+
+V6'da 242 ek kelime, Türkçe Hunspell yazım sözlüğünden aday olarak alınmış ve oyun için elle gözden geçirilmiştir. Hunspell'in toplu çekim çıktısı oyuna aktarılmamıştır.
+
+- Package/source mirror: `dictionary-tr` in `wooorm/dictionaries`
+- Source described by upstream as Turkish spelling dictionary
+- Dictionary/affix license: MIT
+- Upstream dictionary copyright notice: Copyright (c) 2014 Harun Reşit Zafer
+
+Lisans metni: `licenses/HUNSPELL_TR_MIT.txt`.
+
+## Kaikki / Wiktionary
+
+Kaikki/Wiktionary verisi V6 binary'sine gömülmemiştir. Bu kaynak araştırmada daha geniş aday havuzu olarak incelenmiştir; CC-BY-SA/GFDL yükümlülükleri nedeniyle doğrudan V6 sözlüğüne alınmamıştır.

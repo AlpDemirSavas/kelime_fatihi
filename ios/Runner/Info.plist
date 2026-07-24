@@ -81,5 +81,7 @@
             </array>
         </dict>
     </array>
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-7947363274814419~9478418238</string>
 </dict>
 </plist>

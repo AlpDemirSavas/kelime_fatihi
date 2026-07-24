@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -24,9 +25,12 @@ class LetterWheel extends StatefulWidget {
 
 class _LetterWheelState extends State<LetterWheel> {
   final List<int> _selected = <int>[];
+
   Offset? _pointer;
   List<Offset> _centers = <Offset>[];
   double _hitRadius = 34;
+
+  int? _activePointer;
 
   String get _word => _selected.map((i) => widget.letters[i]).join();
 
@@ -37,101 +41,119 @@ class _LetterWheelState extends State<LetterWheel> {
         final size = min(constraints.maxWidth, 310.0);
         final center = Offset(size / 2, size / 2);
         final count = widget.letters.length;
+
         final nodeSize = count <= 7
             ? 60.0
             : count == 8
             ? 52.0
             : 46.0;
+
         _hitRadius = nodeSize / 2 + 4;
+
         final radius = size * (count <= 7 ? .34 : .37);
+
         _centers = List.generate(widget.letters.length, (i) {
           final angle = -pi / 2 + i * 2 * pi / widget.letters.length;
+
           return center + Offset(cos(angle), sin(angle)) * radius;
         });
 
         return SizedBox(
           width: size,
           height: size,
-          child: GestureDetector(
+          child: RawGestureDetector(
             behavior: HitTestBehavior.opaque,
-            onPanDown: (details) =>
-                _updatePointer(details.localPosition, reset: true),
-            onPanUpdate: (details) => _updatePointer(details.localPosition),
-            onPanEnd: (_) => _submit(),
-            onPanCancel: _clear,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _WheelPainter(
-                      centers: _centers,
-                      selected: _selected,
-                      pointer: _pointer,
-                    ),
-                  ),
-                ),
-                Center(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 120),
-                    child: Text(
-                      TurkishText.upper(_word),
-                      key: ValueKey(_word),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: GameTheme.gold,
+            gestures: <Type, GestureRecognizerFactory>{
+              EagerGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<EagerGestureRecognizer>(
+                    () => EagerGestureRecognizer(),
+                    (EagerGestureRecognizer instance) {},
+              ),
+            },
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: _handlePointerDown,
+              onPointerMove: _handlePointerMove,
+              onPointerUp: _handlePointerUp,
+              onPointerCancel: _handlePointerCancel,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _WheelPainter(
+                        centers: _centers,
+                        selected: _selected,
+                        pointer: _pointer,
                       ),
                     ),
                   ),
-                ),
-                ...List.generate(widget.letters.length, (i) {
-                  final c = _centers[i];
-                  final selected = _selected.contains(i);
-                  return Positioned(
-                    left: c.dx - nodeSize / 2,
-                    top: c.dy - nodeSize / 2,
-                    width: nodeSize,
-                    height: nodeSize,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 100),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: selected
-                            ? GameTheme.cyan
-                            : const Color(0xFF173B60),
-                        border: Border.all(
-                          color: selected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: .16),
-                          width: selected ? 3 : 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: selected ? 24 : 10,
-                            color: (selected ? GameTheme.cyan : Colors.black)
-                                .withValues(alpha: .35),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
+
+                  Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 120),
                       child: Text(
-                        TurkishText.upper(widget.letters[i]),
-                        style: TextStyle(
-                          fontSize: count <= 7
-                              ? 26
-                              : count == 8
-                              ? 23
-                              : 21,
+                        TurkishText.upper(_word),
+                        key: ValueKey(_word),
+                        style: const TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: selected
-                              ? const Color(0xFF04121E)
-                              : Colors.white,
+                          color: GameTheme.gold,
                         ),
                       ),
                     ),
-                  );
-                }),
-              ],
+                  ),
+
+                  ...List.generate(widget.letters.length, (i) {
+                    final c = _centers[i];
+                    final selected = _selected.contains(i);
+
+                    return Positioned(
+                      left: c.dx - nodeSize / 2,
+                      top: c.dy - nodeSize / 2,
+                      width: nodeSize,
+                      height: nodeSize,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 100),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected
+                              ? GameTheme.cyan
+                              : const Color(0xFF173B60),
+                          border: Border.all(
+                            color: selected
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: .16),
+                            width: selected ? 3 : 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              blurRadius: selected ? 24 : 10,
+                              color: (
+                                  selected ? GameTheme.cyan : Colors.black
+                              ).withValues(alpha: .35),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          TurkishText.upper(widget.letters[i]),
+                          style: TextStyle(
+                            fontSize: count <= 7
+                                ? 26
+                                : count == 8
+                                ? 23
+                                : 21,
+                            fontWeight: FontWeight.w900,
+                            color: selected
+                                ? const Color(0xFF04121E)
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         );
@@ -139,28 +161,75 @@ class _LetterWheelState extends State<LetterWheel> {
     );
   }
 
-  void _updatePointer(Offset point, {bool reset = false}) {
-    if (reset) _selected.clear();
+  void _handlePointerDown(PointerDownEvent event) {
+    if (_activePointer != null) return;
+
+    _activePointer = event.pointer;
+
+    _updatePointer(
+      event.localPosition,
+      reset: true,
+    );
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (event.pointer != _activePointer) return;
+
+    _updatePointer(event.localPosition);
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    if (event.pointer != _activePointer) return;
+
+    _activePointer = null;
+    _submit();
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    if (event.pointer != _activePointer) return;
+
+    _activePointer = null;
+    _clear();
+  }
+
+  void _updatePointer(
+      Offset point, {
+        bool reset = false,
+      }) {
+    if (reset) {
+      _selected.clear();
+    }
+
     _pointer = point;
+
     for (var i = 0; i < _centers.length; i++) {
       if ((point - _centers[i]).distance <= _hitRadius &&
           !_selected.contains(i)) {
         _selected.add(i);
+
         HapticFeedback.selectionClick();
         widget.onLetterSelected?.call();
+
         break;
       }
     }
+
     setState(() {});
   }
 
   void _submit() {
     final word = _word;
-    if (word.isNotEmpty) widget.onSubmitted(word);
+
+    if (word.isNotEmpty) {
+      widget.onSubmitted(word);
+    }
+
     _clear();
   }
 
   void _clear() {
+    if (!mounted) return;
+
     setState(() {
       _selected.clear();
       _pointer = null;
@@ -169,14 +238,23 @@ class _LetterWheelState extends State<LetterWheel> {
 }
 
 class _WheelPainter extends CustomPainter {
-  _WheelPainter({required this.centers, required this.selected, this.pointer});
+  _WheelPainter({
+    required this.centers,
+    required this.selected,
+    this.pointer,
+  });
+
   final List<Offset> centers;
   final List<int> selected;
   final Offset? pointer;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    final center = Offset(
+      size.width / 2,
+      size.height / 2,
+    );
+
     canvas.drawCircle(
       center,
       size.width * .47,
@@ -184,6 +262,7 @@ class _WheelPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: .035)
         ..style = PaintingStyle.fill,
     );
+
     canvas.drawCircle(
       center,
       size.width * .47,
@@ -194,12 +273,27 @@ class _WheelPainter extends CustomPainter {
     );
 
     if (selected.isEmpty) return;
+
     final path = Path()
-      ..moveTo(centers[selected.first].dx, centers[selected.first].dy);
+      ..moveTo(
+        centers[selected.first].dx,
+        centers[selected.first].dy,
+      );
+
     for (final index in selected.skip(1)) {
-      path.lineTo(centers[index].dx, centers[index].dy);
+      path.lineTo(
+        centers[index].dx,
+        centers[index].dy,
+      );
     }
-    if (pointer != null) path.lineTo(pointer!.dx, pointer!.dy);
+
+    if (pointer != null) {
+      path.lineTo(
+        pointer!.dx,
+        pointer!.dy,
+      );
+    }
+
     canvas.drawPath(
       path,
       Paint()

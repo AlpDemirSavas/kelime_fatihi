@@ -13,14 +13,18 @@ class AdService {
   Future<void>? _rewardedLoadFuture;
   bool privacyOptionsRequired = false;
 
-  static const String _androidInterstitialLive =
-      String.fromEnvironment('ADMOB_ANDROID_INTERSTITIAL');
-  static const String _iosInterstitialLive =
-      String.fromEnvironment('ADMOB_IOS_INTERSTITIAL');
-  static const String _androidRewardedLive =
-      String.fromEnvironment('ADMOB_ANDROID_REWARDED');
-  static const String _iosRewardedLive =
-      String.fromEnvironment('ADMOB_IOS_REWARDED');
+  static const String _androidInterstitialLive = String.fromEnvironment(
+    'ADMOB_ANDROID_INTERSTITIAL',
+  );
+  static const String _iosInterstitialLive = String.fromEnvironment(
+    'ADMOB_IOS_INTERSTITIAL',
+  );
+  static const String _androidRewardedLive = String.fromEnvironment(
+    'ADMOB_ANDROID_REWARDED',
+  );
+  static const String _iosRewardedLive = String.fromEnvironment(
+    'ADMOB_IOS_REWARDED',
+  );
 
   static String get _interstitialId {
     if (!kReleaseMode) {
@@ -53,8 +57,9 @@ class AdService {
     await _gatherConsent();
     final canRequestAds = await ConsentInformation.instance.canRequestAds();
     privacyOptionsRequired =
-        await ConsentInformation.instance.getPrivacyOptionsRequirementStatus() ==
-            PrivacyOptionsRequirementStatus.required;
+        await ConsentInformation.instance
+            .getPrivacyOptionsRequirementStatus() ==
+        PrivacyOptionsRequirementStatus.required;
     if (!canRequestAds) return;
 
     await MobileAds.instance.initialize();

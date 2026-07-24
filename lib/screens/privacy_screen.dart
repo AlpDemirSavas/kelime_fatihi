@@ -12,7 +12,10 @@ class PrivacyScreen extends StatelessWidget {
     const supportEmail = String.fromEnvironment('SUPPORT_EMAIL');
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: const Text('Gizlilik Politikası')),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Gizlilik Politikası'),
+      ),
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
         child: SafeArea(
@@ -48,13 +51,22 @@ class PrivacyScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('İletişim', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: GameTheme.cyan)),
+                    const Text(
+                      'İletişim',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        color: GameTheme.cyan,
+                      ),
+                    ),
                     const SizedBox(height: 7),
                     Text(
                       supportEmail.isEmpty
                           ? 'Yayın öncesi SUPPORT_EMAIL değeri eklenmelidir. Ayrıca App Store/Google Play ürün sayfasındaki destek bağlantısı kullanılabilir.'
                           : supportEmail,
-                      style: TextStyle(color: Colors.white.withValues(alpha: .7)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .7),
+                      ),
                     ),
                   ],
                 ),
@@ -80,9 +92,22 @@ class _PolicySection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: GameTheme.cyan)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                color: GameTheme.cyan,
+              ),
+            ),
             const SizedBox(height: 7),
-            Text(body, style: TextStyle(color: Colors.white.withValues(alpha: .7), height: 1.45)),
+            Text(
+              body,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .7),
+                height: 1.45,
+              ),
+            ),
           ],
         ),
       ),

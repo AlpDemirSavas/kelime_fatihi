@@ -15,7 +15,8 @@ class StorageService {
 
   Future<void> setInt(String key, int value) => _prefs.setInt(key, value);
   Future<void> setBool(String key, bool value) => _prefs.setBool(key, value);
-  Future<void> setString(String key, String value) => _prefs.setString(key, value);
+  Future<void> setString(String key, String value) =>
+      _prefs.setString(key, value);
   Future<void> setStringList(String key, List<String> value) =>
       _prefs.setStringList(key, value);
 }

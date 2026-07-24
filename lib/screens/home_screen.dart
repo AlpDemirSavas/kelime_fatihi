@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/game_controller.dart';
 import '../core/game_theme.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/game_scope.dart';
@@ -47,7 +48,8 @@ class HomeScreen extends StatelessWidget {
                             children: [
                               Text(
                                 'KELİME',
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
                                       color: GameTheme.cyan,
                                       letterSpacing: 6,
                                       fontWeight: FontWeight.w900,
@@ -55,25 +57,37 @@ class HomeScreen extends StatelessWidget {
                               ),
                               Text(
                                 'FATİHİ',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 42),
+                                style: Theme.of(context).textTheme.displaySmall
+                                    ?.copyWith(fontSize: 42),
                               ),
                             ],
                           ),
                         ),
-                        TopStats(hearts: game.hearts, coins: game.coins),
+                        TopStats(
+                          hearts: game.hearts,
+                          coins: game.coins,
+                          heartTimer:
+                              game.hearts < GameController.maxNaturalHearts
+                              ? game.nextHeartLabel
+                              : null,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Harfleri birleştir, dünyayı fethet, serini ve tacını büyüt.',
-                      style: TextStyle(color: Colors.white.withValues(alpha: .68)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .68),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     _ModeCard(
                       eyebrow: 'HER GÜN TEK MEYDAN OKUMA',
                       title: 'Günün Kelimesi',
                       subtitle: game.dailyFinished
-                          ? (game.dailyWon ? 'Bugünün tacı senin 👑' : 'Yarın yeniden dene')
+                          ? (game.dailyWon
+                                ? 'Bugünün tacı senin 👑'
+                                : 'Yarın yeniden dene')
                           : '5 harf • 6 deneme • Herkese aynı kelime',
                       icon: Icons.calendar_month_rounded,
                       accent: GameTheme.mint,
@@ -89,12 +103,17 @@ class HomeScreen extends StatelessWidget {
                           : '10.000 benzersiz harf çemberi • Combo • Sandık • Bonus kelime',
                       icon: Icons.auto_awesome_rounded,
                       accent: region.accent,
-                      badge: game.campaignCompleted ? '10.000/10.000' : 'Bölüm ${game.levelNumber}',
+                      badge: game.campaignCompleted
+                          ? '10.000/10.000'
+                          : 'Bölüm ${game.levelNumber}',
                       onTap: () => _open(context, const ConquestScreen()),
                     ),
                     const SizedBox(height: 12),
                     GlassCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       child: Row(
                         children: [
                           const Text('🔥', style: TextStyle(fontSize: 28)),
@@ -105,14 +124,19 @@ class HomeScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   '${game.dailyStreak} günlük giriş serisi',
-                                  style: const TextStyle(fontWeight: FontWeight.w900),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   game.streakRewardMessage.isNotEmpty
                                       ? game.streakRewardMessage
                                       : '7 gün: +5 altın • 30 gün: +20 altın • Bir gün kaçırırsan seri sıfırlanır.',
-                                  style: TextStyle(color: Colors.white.withValues(alpha: .6), fontSize: 12),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: .6),
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),
@@ -133,27 +157,52 @@ class HomeScreen extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
-                            child: const Icon(Icons.task_alt_rounded, color: GameTheme.gold),
+                            child: const Icon(
+                              Icons.task_alt_rounded,
+                              color: GameTheme.gold,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Günlük Görevler', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+                                const Text(
+                                  'Günlük Görevler',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 17,
+                                  ),
+                                ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  claimable > 0 ? '$claimable ödül seni bekliyor!' : 'Bugünün 3 görevini tamamla.',
-                                  style: TextStyle(color: Colors.white.withValues(alpha: .6)),
+                                  claimable > 0
+                                      ? '$claimable ödül seni bekliyor!'
+                                      : 'Bugünün 3 görevini tamamla.',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: .6),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                           if (claimable > 0)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                              decoration: BoxDecoration(color: GameTheme.gold, borderRadius: BorderRadius.circular(99)),
-                              child: Text('$claimable', style: const TextStyle(color: Color(0xFF2A2000), fontWeight: FontWeight.w900)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: GameTheme.gold,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                '$claimable',
+                                style: const TextStyle(
+                                  color: Color(0xFF2A2000),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                             )
                           else
                             const Icon(Icons.chevron_right_rounded),
@@ -164,12 +213,17 @@ class HomeScreen extends StatelessWidget {
                     GlassCard(
                       child: Row(
                         children: [
-                          const Icon(Icons.offline_bolt_rounded, color: GameTheme.cyan),
+                          const Icon(
+                            Icons.offline_bolt_rounded,
+                            color: GameTheme.cyan,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Metro modu hazır: oyun, sözlük, bölümler, görevler ve kayıtlar internetsiz çalışır. Yalnızca reklam ve gerçek para mağazası internet ister.',
-                              style: TextStyle(color: Colors.white.withValues(alpha: .72)),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: .72),
+                              ),
                             ),
                           ),
                         ],
@@ -191,18 +245,23 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _open(BuildContext context, Widget page) {
-    Navigator.of(context).push(PageRouteBuilder(
-      transitionDuration: const Duration(milliseconds: 360),
-      pageBuilder: (_, animation, __) => FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-        child: ScaleTransition(
-          scale: Tween(begin: .975, end: 1.0).animate(
-            CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 360),
+        pageBuilder: (_, animation, __) => FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
           ),
-          child: page,
+          child: ScaleTransition(
+            scale: Tween(begin: .975, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+            ),
+            child: page,
+          ),
         ),
       ),
-    ));
+    );
   }
 }
 
@@ -245,13 +304,30 @@ class _ModeCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       eyebrow,
-                      style: TextStyle(color: accent, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 11),
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: accent.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
-                    child: Text(badge, style: TextStyle(color: accent, fontWeight: FontWeight.w900)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      badge,
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -260,11 +336,20 @@ class _ModeCard extends StatelessWidget {
               const SizedBox(height: 14),
               Text(title, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 7),
-              Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: .68))),
+              Text(
+                subtitle,
+                style: TextStyle(color: Colors.white.withValues(alpha: .68)),
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text('OYNA', style: TextStyle(color: accent, fontWeight: FontWeight.w900)),
+                  Text(
+                    'OYNA',
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(width: 6),
                   Icon(Icons.arrow_forward_rounded, color: accent),
                 ],

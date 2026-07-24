@@ -24,7 +24,10 @@ class _AccountScreenState extends State<AccountScreen> {
     final game = GameScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: const Text('Hesap ve Bulut Yedeği')),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Hesap ve Bulut Yedeği'),
+      ),
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
         accent: game.currentRegion.accent,
@@ -44,7 +47,9 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       alignment: Alignment.center,
                       child: Icon(
-                        game.signedIn ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                        game.signedIn
+                            ? Icons.cloud_done_rounded
+                            : Icons.cloud_off_rounded,
                         color: game.signedIn ? GameTheme.mint : GameTheme.cyan,
                         size: 31,
                       ),
@@ -56,14 +61,21 @@ class _AccountScreenState extends State<AccountScreen> {
                         children: [
                           Text(
                             game.signedIn ? game.accountName : 'Misafir Oyuncu',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 19,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             game.signedIn
-                                ? (game.accountEmail.isEmpty ? 'Bulut yedeği açık' : game.accountEmail)
+                                ? (game.accountEmail.isEmpty
+                                      ? 'Bulut yedeği açık'
+                                      : game.accountEmail)
                                 : 'Oyun bu cihazda kaydedilir. Hesapla giriş yaparsan seviye ve ilerleme buluta yedeklenir.',
-                            style: TextStyle(color: Colors.white.withValues(alpha: .62)),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .62),
+                            ),
                           ),
                         ],
                       ),
@@ -82,14 +94,19 @@ class _AccountScreenState extends State<AccountScreen> {
                           Icon(Icons.settings_rounded, color: GameTheme.gold),
                           SizedBox(width: 10),
                           Expanded(
-                            child: Text('Firebase yapılandırması gerekiyor', style: TextStyle(fontWeight: FontWeight.w900)),
+                            child: Text(
+                              'Firebase yapılandırması gerekiyor',
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Oyun offline çalışmaya devam eder. Google/Apple girişini açmak için proje kökünde flutterfire configure adımını tamamla.',
-                        style: TextStyle(color: Colors.white.withValues(alpha: .65)),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .65),
+                        ),
                       ),
                     ],
                   ),
@@ -116,7 +133,10 @@ class _AccountScreenState extends State<AccountScreen> {
                 Text(
                   'Giriş zorunlu değildir. Metroda veya internet yokken misafir olarak oynamaya devam edebilirsin.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withValues(alpha: .5), fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .5),
+                    fontSize: 12,
+                  ),
                 ),
               ] else ...[
                 GlassCard(
@@ -125,14 +145,21 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.backup_rounded, color: GameTheme.mint),
+                          const Icon(
+                            Icons.backup_rounded,
+                            color: GameTheme.mint,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               game.cloudSyncing
                                   ? 'Bulut yedeği güncelleniyor…'
-                                  : (game.cloudStatusMessage.isEmpty ? 'İlerleme yedeği hazır' : game.cloudStatusMessage),
-                              style: const TextStyle(fontWeight: FontWeight.w900),
+                                  : (game.cloudStatusMessage.isEmpty
+                                        ? 'İlerleme yedeği hazır'
+                                        : game.cloudStatusMessage),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                         ],
@@ -140,11 +167,16 @@ class _AccountScreenState extends State<AccountScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Seviye, fethedilen bölüm sayısı, rekorlar ve taç ilerlemesi hesabına bağlanır. Can/altın cihaz ekonomisi olarak tutulur; reklamsız satın alma mağazadan geri yüklenir.',
-                        style: TextStyle(color: Colors.white.withValues(alpha: .62), fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .62),
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(
-                        onPressed: (_busy || game.cloudSyncing) ? null : () => _sync(game),
+                        onPressed: (_busy || game.cloudSyncing)
+                            ? null
+                            : () => _sync(game),
                         icon: const Icon(Icons.sync_rounded),
                         label: const Text('ŞİMDİ YEDEKLE'),
                       ),
@@ -153,19 +185,27 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: _busy ? null : () async {
-                    setState(() => _busy = true);
-                    await game.signOutAccount();
-                    if (mounted) setState(() => _busy = false);
-                  },
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          setState(() => _busy = true);
+                          await game.signOutAccount();
+                          if (mounted) setState(() => _busy = false);
+                        },
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Hesaptan çık'),
                 ),
                 const SizedBox(height: 20),
                 TextButton.icon(
                   onPressed: _busy ? null : () => _confirmDelete(game),
-                  icon: const Icon(Icons.delete_forever_rounded, color: GameTheme.danger),
-                  label: const Text('Hesabı ve bulut yedeğini sil', style: TextStyle(color: GameTheme.danger)),
+                  icon: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: GameTheme.danger,
+                  ),
+                  label: const Text(
+                    'Hesabı ve bulut yedeğini sil',
+                    style: TextStyle(color: GameTheme.danger),
+                  ),
                 ),
               ],
               const SizedBox(height: 18),
@@ -220,8 +260,14 @@ class _AccountScreenState extends State<AccountScreen> {
           'Buluttaki Kelime Fatihi yedeğin silinir ve hesabın uygulamadan kaldırılır. Bu işlem geri alınamaz. Cihazdaki yerel oyun kaydı ayrıca kalabilir.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('VAZGEÇ')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('HESABI SİL')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('VAZGEÇ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('HESABI SİL'),
+          ),
         ],
       ),
     );
@@ -235,7 +281,9 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   void _show(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

@@ -63,7 +63,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '672830071766',
     projectId: 'kelime-fatihi-cd8ca',
     storageBucket: 'kelime-fatihi-cd8ca.firebasestorage.app',
-    iosClientId: '672830071766-s7ruut99678sn62cctgeb9k1jg2qbete.apps.googleusercontent.com',
+    iosClientId:
+        '672830071766-s7ruut99678sn62cctgeb9k1jg2qbete.apps.googleusercontent.com',
     iosBundleId: 'com.esalde.kelimefatihi',
   );
 }

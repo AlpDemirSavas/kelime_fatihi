@@ -37,7 +37,11 @@ class _LetterWheelState extends State<LetterWheel> {
         final size = min(constraints.maxWidth, 310.0);
         final center = Offset(size / 2, size / 2);
         final count = widget.letters.length;
-        final nodeSize = count <= 7 ? 60.0 : count == 8 ? 52.0 : 46.0;
+        final nodeSize = count <= 7
+            ? 60.0
+            : count == 8
+            ? 52.0
+            : 46.0;
         _hitRadius = nodeSize / 2 + 4;
         final radius = size * (count <= 7 ? .34 : .37);
         _centers = List.generate(widget.letters.length, (i) {
@@ -48,11 +52,13 @@ class _LetterWheelState extends State<LetterWheel> {
         return SizedBox(
           width: size,
           height: size,
-          child: Listener(
-            onPointerDown: (event) => _updatePointer(event.localPosition, reset: true),
-            onPointerMove: (event) => _updatePointer(event.localPosition),
-            onPointerUp: (_) => _submit(),
-            onPointerCancel: (_) => _clear(),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanDown: (details) =>
+                _updatePointer(details.localPosition, reset: true),
+            onPanUpdate: (details) => _updatePointer(details.localPosition),
+            onPanEnd: (_) => _submit(),
+            onPanCancel: _clear,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -90,9 +96,13 @@ class _LetterWheelState extends State<LetterWheel> {
                       duration: const Duration(milliseconds: 100),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: selected ? GameTheme.cyan : const Color(0xFF173B60),
+                        color: selected
+                            ? GameTheme.cyan
+                            : const Color(0xFF173B60),
                         border: Border.all(
-                          color: selected ? Colors.white : Colors.white.withValues(alpha: .16),
+                          color: selected
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: .16),
                           width: selected ? 3 : 1,
                         ),
                         boxShadow: [
@@ -107,9 +117,15 @@ class _LetterWheelState extends State<LetterWheel> {
                       child: Text(
                         TurkishText.upper(widget.letters[i]),
                         style: TextStyle(
-                          fontSize: count <= 7 ? 26 : count == 8 ? 23 : 21,
+                          fontSize: count <= 7
+                              ? 26
+                              : count == 8
+                              ? 23
+                              : 21,
                           fontWeight: FontWeight.w900,
-                          color: selected ? const Color(0xFF04121E) : Colors.white,
+                          color: selected
+                              ? const Color(0xFF04121E)
+                              : Colors.white,
                         ),
                       ),
                     ),
@@ -127,7 +143,8 @@ class _LetterWheelState extends State<LetterWheel> {
     if (reset) _selected.clear();
     _pointer = point;
     for (var i = 0; i < _centers.length; i++) {
-      if ((point - _centers[i]).distance <= _hitRadius && !_selected.contains(i)) {
+      if ((point - _centers[i]).distance <= _hitRadius &&
+          !_selected.contains(i)) {
         _selected.add(i);
         HapticFeedback.selectionClick();
         widget.onLetterSelected?.call();
@@ -177,7 +194,8 @@ class _WheelPainter extends CustomPainter {
     );
 
     if (selected.isEmpty) return;
-    final path = Path()..moveTo(centers[selected.first].dx, centers[selected.first].dy);
+    final path = Path()
+      ..moveTo(centers[selected.first].dx, centers[selected.first].dy);
     for (final index in selected.skip(1)) {
       path.lineTo(centers[index].dx, centers[index].dy);
     }

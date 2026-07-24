@@ -8,16 +8,18 @@ import '../core/turkish_text.dart';
 import '../models/conquest_level.dart';
 
 List<List<String>> _parseDictionaryPayload(List<String> texts) {
-  return texts.map((text) {
-    final words = <String>[];
-    for (final raw in const LineSplitter().convert(text)) {
-      final cleaned = raw.split('#').first.trim();
-      if (cleaned.isEmpty) continue;
-      final word = TurkishText.normalizeWord(cleaned);
-      if (word.length >= 2) words.add(word);
-    }
-    return words;
-  }).toList(growable: false);
+  return texts
+      .map((text) {
+        final words = <String>[];
+        for (final raw in const LineSplitter().convert(text)) {
+          final cleaned = raw.split('#').first.trim();
+          if (cleaned.isEmpty) continue;
+          final word = TurkishText.normalizeWord(cleaned);
+          if (word.length >= 2) words.add(word);
+        }
+        return words;
+      })
+      .toList(growable: false);
 }
 
 class DictionaryService {
@@ -27,7 +29,8 @@ class DictionaryService {
   final List<String> _dailyWords = <String>[];
   final Set<String> _levelWords = <String>{};
   final List<String> _seedWords = <String>[];
-  final Map<String, List<String>> _levelWordsBySignature = <String, List<String>>{};
+  final Map<String, List<String>> _levelWordsBySignature =
+      <String, List<String>>{};
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
@@ -86,7 +89,8 @@ class DictionaryService {
     _loaded = true;
   }
 
-  bool contains(String value) => _words.contains(TurkishText.normalizeWord(value));
+  bool contains(String value) =>
+      _words.contains(TurkishText.normalizeWord(value));
 
   String dailyWord(DateTime now) {
     if (_dailyWords.isEmpty) return 'kalem';
@@ -117,19 +121,27 @@ class DictionaryService {
     final targetCount = safeNumber < 100
         ? 5
         : safeNumber < 1000
-            ? 6
-            : safeNumber < 3000
-                ? 7
-                : safeNumber < 5500
-                    ? 8
-                    : safeNumber < 8000
-                        ? 9
-                        : 10;
+        ? 6
+        : safeNumber < 3000
+        ? 7
+        : safeNumber < 5500
+        ? 8
+        : safeNumber < 8000
+        ? 9
+        : 10;
 
-    final sameSignature = words.where((word) => _signature(word) == _signature(seed)).toList();
-    final mainWord = sameSignature.contains(seed) ? seed : (sameSignature.isNotEmpty ? sameSignature.first : seed);
-    final others = words.where((word) => word != mainWord).toList()..shuffle(seeded);
-    final selected = <String>[mainWord, ...others.take(targetCount - 1)].toSet().toList();
+    final sameSignature = words
+        .where((word) => _signature(word) == _signature(seed))
+        .toList();
+    final mainWord = sameSignature.contains(seed)
+        ? seed
+        : (sameSignature.isNotEmpty ? sameSignature.first : seed);
+    final others = words.where((word) => word != mainWord).toList()
+      ..shuffle(seeded);
+    final selected = <String>[
+      mainWord,
+      ...others.take(targetCount - 1),
+    ].toSet().toList();
     selected.sort((a, b) {
       final length = b.length.compareTo(a.length);
       return length != 0 ? length : a.compareTo(b);

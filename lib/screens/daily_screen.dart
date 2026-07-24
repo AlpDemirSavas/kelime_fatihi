@@ -41,7 +41,9 @@ class _DailyScreenState extends State<DailyScreen> {
             IconButton(
               tooltip: 'Sonucu kopyala',
               onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: game.dailyShareText()));
+                await Clipboard.setData(
+                  ClipboardData(text: game.dailyShareText()),
+                );
                 if (mounted) _toast('Sonuç panoya kopyalandı.');
               },
               icon: const Icon(Icons.ios_share_rounded),
@@ -60,12 +62,21 @@ class _DailyScreenState extends State<DailyScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GlassCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _MiniStat(label: 'Giriş serisi', value: '🔥 ${game.dailyStreak}'),
-                        _MiniStat(label: 'Galibiyet', value: '${game.dailyWins}'),
+                        _MiniStat(
+                          label: 'Giriş serisi',
+                          value: '🔥 ${game.dailyStreak}',
+                        ),
+                        _MiniStat(
+                          label: 'Galibiyet',
+                          value: '${game.dailyWins}',
+                        ),
                         _MiniStat(label: 'Ödül', value: '+30 🪙'),
                       ],
                     ),
@@ -82,8 +93,8 @@ class _DailyScreenState extends State<DailyScreen> {
                             final word = row < guesses.length
                                 ? guesses[row]
                                 : row == guesses.length && !game.dailyFinished
-                                    ? current
-                                    : '';
+                                ? current
+                                : '';
                             final feedback = row < guesses.length
                                 ? game.evaluateDaily(guesses[row])
                                 : null;
@@ -92,9 +103,16 @@ class _DailyScreenState extends State<DailyScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(5, (col) {
-                                  final letter = col < word.length ? word[col] : '';
-                                  final state = feedback == null ? null : feedback[col].state;
-                                  return _DailyTile(letter: letter, state: state);
+                                  final letter = col < word.length
+                                      ? word[col]
+                                      : '';
+                                  final state = feedback == null
+                                      ? null
+                                      : feedback[col].state;
+                                  return _DailyTile(
+                                    letter: letter,
+                                    state: state,
+                                  );
                                 }),
                               ),
                             );
@@ -106,7 +124,10 @@ class _DailyScreenState extends State<DailyScreen> {
                                   ? 'Muhteşem! Bugünün kelimesini fethettin. 👑'
                                   : 'Bugünün kelimesi: ${TurkishText.upper(game.dailyWord)}',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 17,
+                              ),
                             ),
                           ],
                         ],
@@ -134,15 +155,19 @@ class _DailyScreenState extends State<DailyScreen> {
               fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: row.map((letter) => _Key(
-                  label: TurkishText.upper(letter),
-                  onTap: () {
-                    if (current.length >= 5) return;
-                    setState(() => current += letter);
-                    HapticFeedback.selectionClick();
-                    game.audio.select();
-                  },
-                )).toList(),
+                children: row
+                    .map(
+                      (letter) => _Key(
+                        label: TurkishText.upper(letter),
+                        onTap: () {
+                          if (current.length >= 5) return;
+                          setState(() => current += letter);
+                          HapticFeedback.selectionClick();
+                          game.audio.select();
+                        },
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           Row(
@@ -152,14 +177,19 @@ class _DailyScreenState extends State<DailyScreen> {
                 icon: Icons.backspace_outlined,
                 onTap: () {
                   if (current.isEmpty) return;
-                  setState(() => current = current.substring(0, current.length - 1));
+                  setState(
+                    () => current = current.substring(0, current.length - 1),
+                  );
                 },
               ),
               const SizedBox(width: 6),
               FilledButton.icon(
                 onPressed: current.length == 5 ? () => _submit(game) : null,
                 icon: const Icon(Icons.auto_awesome_rounded),
-                label: const Text('FETHET', style: TextStyle(fontWeight: FontWeight.w900)),
+                label: const Text(
+                  'FETHET',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
                 style: FilledButton.styleFrom(minimumSize: const Size(150, 48)),
               ),
             ],
@@ -212,7 +242,12 @@ class _DailyTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(13),
         border: Border.all(color: Colors.white.withValues(alpha: .16)),
         boxShadow: state == LetterState.correct
-            ? [BoxShadow(color: GameTheme.mint.withValues(alpha: .28), blurRadius: 16)]
+            ? [
+                BoxShadow(
+                  color: GameTheme.mint.withValues(alpha: .28),
+                  blurRadius: 16,
+                ),
+              ]
             : null,
       ),
       alignment: Alignment.center,
@@ -249,7 +284,13 @@ class _Key extends StatelessWidget {
             width: 30,
             height: 42,
             child: Center(
-              child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
         ),
@@ -277,8 +318,17 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: .58))),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.white.withValues(alpha: .58),
+          ),
+        ),
       ],
     );
   }

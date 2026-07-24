@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 import '../core/game_theme.dart';
 
 class CelebrationOverlay extends StatefulWidget {
-  const CelebrationOverlay({super.key, required this.child, this.active = false});
+  const CelebrationOverlay({
+    super.key,
+    required this.child,
+    this.active = false,
+  });
   final Widget child;
   final bool active;
 
@@ -72,12 +76,16 @@ class _ConfettiPainter extends CustomPainter {
       final velocityY = -260 - random.nextDouble() * 250;
       final x = startX + velocityX * t;
       final y = size.height * .42 + velocityY * t + 480 * t * t;
-      final paint = Paint()..color = colors[i % colors.length].withValues(alpha: 1 - t);
+      final paint = Paint()
+        ..color = colors[i % colors.length].withValues(alpha: 1 - t);
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(t * 10 + i);
       canvas.drawRRect(
-        RRect.fromRectAndRadius(const Rect.fromLTWH(-4, -7, 8, 14), const Radius.circular(2)),
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-4, -7, 8, 14),
+          const Radius.circular(2),
+        ),
         paint,
       );
       canvas.restore();
@@ -85,5 +93,6 @@ class _ConfettiPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) => oldDelegate.t != t;
+  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) =>
+      oldDelegate.t != t;
 }

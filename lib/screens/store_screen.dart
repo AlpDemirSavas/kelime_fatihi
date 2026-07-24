@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../controllers/game_controller.dart';
 import '../core/game_theme.dart';
 import '../services/purchase_service.dart';
 import '../widgets/animated_background.dart';
@@ -35,7 +36,10 @@ class _StoreScreenState extends State<StoreScreen> {
     final store = game.purchases;
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: const Text('Fetih Mağazası')),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Fetih Mağazası'),
+      ),
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
         child: SafeArea(
@@ -45,14 +49,41 @@ class _StoreScreenState extends State<StoreScreen> {
               GlassCard(
                 child: Row(
                   children: [
-                    const Icon(Icons.favorite_rounded, color: GameTheme.danger, size: 38),
+                    const Icon(
+                      Icons.favorite_rounded,
+                      color: GameTheme.danger,
+                      size: 38,
+                    ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Can Hazinesi', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-                          Text('Şu an ${game.hearts} canın ve ${game.coins} altının var.', style: TextStyle(color: Colors.white.withValues(alpha: .65))),
+                          const Text(
+                            'Can Hazinesi',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                            ),
+                          ),
+                          Text(
+                            'Şu an ${game.hearts} canın ve ${game.coins} altının var.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .65),
+                            ),
+                          ),
+                          if (game.hearts <
+                              GameController.maxNaturalHearts) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              'Doğal yenilenme: ${game.nextHeartLabel}',
+                              style: const TextStyle(
+                                color: GameTheme.cyan,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -84,12 +115,17 @@ class _StoreScreenState extends State<StoreScreen> {
                         children: [
                           const Text(
                             'Altınla Can Al',
-                            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 17,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '50 altın harca, +1 can kazan.',
-                            style: TextStyle(color: Colors.white.withValues(alpha: .6)),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .6),
+                            ),
                           ),
                         ],
                       ),
@@ -133,7 +169,10 @@ class _StoreScreenState extends State<StoreScreen> {
               _Pack(
                 title: 'İmparator Paketi',
                 hearts: 50,
-                price: store.priceFor(PurchaseService.productHeart50, '₺149,99'),
+                price: store.priceFor(
+                  PurchaseService.productHeart50,
+                  '₺149,99',
+                ),
                 onBuy: () => store.buy(PurchaseService.productHeart50),
               ),
               const SizedBox(height: 18),
@@ -141,14 +180,21 @@ class _StoreScreenState extends State<StoreScreen> {
                 child: Column(
                   children: [
                     Icon(
-                      game.isAdFree ? Icons.verified_rounded : Icons.block_rounded,
+                      game.isAdFree
+                          ? Icons.verified_rounded
+                          : Icons.block_rounded,
                       color: game.isAdFree ? GameTheme.mint : GameTheme.gold,
                       size: 36,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      game.isAdFree ? 'Reklamsız Sürüm Aktif' : 'Reklamsız Sürüm',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19),
+                      game.isAdFree
+                          ? 'Reklamsız Sürüm Aktif'
+                          : 'Reklamsız Sürüm',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 19,
+                      ),
                     ),
                     const SizedBox(height: 5),
                     Text(
@@ -156,21 +202,33 @@ class _StoreScreenState extends State<StoreScreen> {
                           ? 'Bölüm sonu zorunlu reklamları artık gösterilmez. İstersen ödüllü reklamı yine kullanabilirsin.'
                           : 'Tek seferlik satın al. Bölüm sonu zorunlu reklamları kalıcı olarak kaldır.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withValues(alpha: .65)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .65),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     if (!game.isAdFree)
                       FilledButton.icon(
-                        onPressed: () => store.buy(PurchaseService.productAdFree),
+                        onPressed: () =>
+                            store.buy(PurchaseService.productAdFree),
                         icon: const Icon(Icons.workspace_premium_rounded),
-                        label: Text(store.priceFor(PurchaseService.productAdFree, '₺149,99')),
+                        label: Text(
+                          store.priceFor(
+                            PurchaseService.productAdFree,
+                            '₺149,99',
+                          ),
+                        ),
                       ),
                     TextButton.icon(
                       onPressed: () async {
                         await game.restorePurchases();
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Mağaza satın almaları geri yükleme isteği gönderildi.')),
+                          const SnackBar(
+                            content: Text(
+                              'Mağaza satın almaları geri yükleme isteği gönderildi.',
+                            ),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.restore_rounded),
@@ -183,19 +241,39 @@ class _StoreScreenState extends State<StoreScreen> {
               GlassCard(
                 child: Column(
                   children: [
-                    const Icon(Icons.ondemand_video_rounded, color: GameTheme.cyan),
+                    const Icon(
+                      Icons.ondemand_video_rounded,
+                      color: GameTheme.cyan,
+                    ),
                     const SizedBox(height: 8),
-                    const Text('Ücretsiz Can', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                    const Text(
+                      'Ücretsiz Can',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text('Ödüllü reklam izle ve +1 can kazan.', style: TextStyle(color: Colors.white.withValues(alpha: .65))),
+                    Text(
+                      'Ödüllü reklam izle ve +1 can kazan.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .65),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
                       onPressed: () async {
                         final earned = await game.watchAdForHeart();
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(earned ? '+1 can eklendi!' : 'Reklam henüz hazır değil. Biraz sonra tekrar dene.'),
-                          ));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                earned
+                                    ? '+1 can eklendi!'
+                                    : 'Reklam henüz hazır değil. Biraz sonra tekrar dene.',
+                              ),
+                            ),
+                          );
                         }
                       },
                       icon: const Icon(Icons.play_circle_fill_rounded),
@@ -208,12 +286,43 @@ class _StoreScreenState extends State<StoreScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Geliştirici modu: Store ürünleri tanımlı değilse paket butonları satın almayı simüle eder.',
-                  style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: .45)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: .45),
+                  ),
                 ),
               ],
               if (store.errorMessage != null) ...[
                 const SizedBox(height: 10),
-                Text(store.errorMessage!, style: const TextStyle(color: GameTheme.danger)),
+                GlassCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        color: GameTheme.gold,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          store.errorMessage!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .72),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: store.loading ? null : store.reloadProducts,
+                        child: const Text('TEKRAR DENE'),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ],
           ),
@@ -250,7 +359,14 @@ class _Pack extends StatelessWidget {
               color: GameTheme.danger.withValues(alpha: .12),
             ),
             alignment: Alignment.center,
-            child: Text('❤\n$hearts', textAlign: TextAlign.center, style: const TextStyle(color: GameTheme.danger, fontWeight: FontWeight.w900)),
+            child: Text(
+              '❤\n$hearts',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: GameTheme.danger,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -259,19 +375,43 @@ class _Pack extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Flexible(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17))),
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                        ),
+                      ),
+                    ),
                     if (popular) ...[
                       const SizedBox(width: 7),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: GameTheme.gold, borderRadius: BorderRadius.circular(20)),
-                        child: const Text('POPÜLER', style: TextStyle(color: Color(0xFF201800), fontSize: 9, fontWeight: FontWeight.w900)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: GameTheme.gold,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'POPÜLER',
+                          style: TextStyle(
+                            color: Color(0xFF201800),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('$hearts ekstra can', style: TextStyle(color: Colors.white.withValues(alpha: .6))),
+                Text(
+                  '$hearts ekstra can',
+                  style: TextStyle(color: Colors.white.withValues(alpha: .6)),
+                ),
               ],
             ),
           ),

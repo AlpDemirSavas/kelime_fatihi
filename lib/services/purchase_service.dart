@@ -27,7 +27,7 @@ class PurchaseService extends ChangeNotifier {
   bool _initialized = false;
 
   Future<void> initialize() {
-    if (_initialized) return Future<void>.value();
+    if (_initialized && products.isNotEmpty) return Future<void>.value();
     return _initializeFuture ??= _doInitialize().whenComplete(() {
       _initializeFuture = null;
     });
@@ -44,16 +44,71 @@ class PurchaseService extends ChangeNotifier {
 
     try {
       available = await _iap.isAvailable();
-      if (available) {
-        final response = await _iap.queryProductDetails(productIds);
-        products = response.productDetails;
-        if (response.error != null) errorMessage = response.error!.message;
+      if (!available) {
+        errorMessage = 'App Store bağlantısı şu anda hazır değil.';
+      } else {
+        await _loadProductsWithRetry();
       }
     } catch (_) {
       available = false;
-      errorMessage = 'Mağaza şu anda kullanılamıyor.';
+      errorMessage = 'App Store bağlantısı şu anda hazır değil.';
     } finally {
       _initialized = true;
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadProductsWithRetry() async {
+    ProductDetailsResponse? lastResponse;
+    const waits = <Duration>[
+      Duration.zero,
+      Duration(seconds: 2),
+      Duration(seconds: 5),
+    ];
+
+    for (var attempt = 0; attempt < waits.length; attempt++) {
+      if (waits[attempt] > Duration.zero) {
+        await Future<void>.delayed(waits[attempt]);
+      }
+
+      try {
+        final response = await _iap
+            .queryProductDetails(productIds)
+            .timeout(const Duration(seconds: 12));
+        lastResponse = response;
+        if (response.productDetails.length == productIds.length) {
+          products = response.productDetails;
+          errorMessage = null;
+          return;
+        }
+      } catch (_) {
+        // StoreKit bazen TestFlight/sandbox tarafında geçici olarak yanıt
+        // vermeyebiliyor. Birkaç kısa deneme sonrası kullanıcıya sade mesaj göster.
+      }
+    }
+
+    products = lastResponse?.productDetails ?? <ProductDetails>[];
+    errorMessage =
+        'App Store ürünlerine şu anda ulaşılamadı. Biraz sonra tekrar dene.';
+  }
+
+  Future<void> reloadProducts() async {
+    loading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      available = await _iap.isAvailable();
+      if (!available) {
+        errorMessage = 'App Store bağlantısı şu anda hazır değil.';
+      } else {
+        await _loadProductsWithRetry();
+      }
+    } catch (_) {
+      errorMessage =
+          'App Store ürünlerine şu anda ulaşılamadı. Biraz sonra tekrar dene.';
+    } finally {
       loading = false;
       notifyListeners();
     }
@@ -67,7 +122,7 @@ class PurchaseService extends ChangeNotifier {
 
     final matches = products.where((p) => p.id == productId);
     if (matches.isEmpty) {
-      errorMessage = 'Bu ürün mağazada henüz tanımlı değil.';
+      errorMessage = 'Bu ürün App Store’dan henüz yüklenemedi. Tekrar dene.';
       notifyListeners();
       return;
     }
@@ -79,7 +134,6 @@ class PurchaseService extends ChangeNotifier {
       await _iap.buyConsumable(purchaseParam: param, autoConsume: true);
     }
   }
-
 
   Future<void> restore() async {
     try {

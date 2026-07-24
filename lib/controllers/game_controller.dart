@@ -55,9 +55,10 @@ class GameController extends ChangeNotifier {
   bool cloudSyncing = false;
   String cloudStatusMessage = '';
   Timer? _cloudSyncTimer;
+  Timer? _heartTicker;
 
   static const int maxNaturalHearts = 5;
-  static const Duration heartRefill = Duration(minutes: 30);
+  static const Duration heartRefill = Duration(minutes: 20);
 
   late ConquestLevel currentLevel;
   final Set<String> foundWords = <String>{};
@@ -117,6 +118,8 @@ class GameController extends ChangeNotifier {
     // progression and sounds all work from bundled/local data while offline.
     purchases.onDelivered = deliverPurchase;
 
+    _startHeartTicker();
+
     loading = false;
     notifyListeners();
     if (account.signedIn) {
@@ -126,7 +129,6 @@ class GameController extends ChangeNotifier {
 
   String _dateKey(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-
 
   Future<void> _syncLoginStreak() async {
     final now = DateTime.now();
@@ -199,10 +201,11 @@ class GameController extends ChangeNotifier {
   }
 
   List<DailyMission> _generateDailyMissions(DateTime date) {
-    final dayIndex = DateTime(date.year, date.month, date.day)
-        .difference(DateTime(2026, 1, 1))
-        .inDays
-        .abs();
+    final dayIndex = DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).difference(DateTime(2026, 1, 1)).inDays.abs();
     final templates = <DailyMission>[
       const DailyMission(
         id: 'bonus',
@@ -251,7 +254,10 @@ class GameController extends ChangeNotifier {
       ),
     ];
 
-    return List.generate(3, (i) => templates[(dayIndex + i * 2) % templates.length]);
+    return List.generate(
+      3,
+      (i) => templates[(dayIndex + i * 2) % templates.length],
+    );
   }
 
   Future<void> _persistMissions() async {
@@ -261,7 +267,11 @@ class GameController extends ChangeNotifier {
     );
   }
 
-  Future<void> _advanceMission(MissionType type, {int amount = 1, int? atLeast}) async {
+  Future<void> _advanceMission(
+    MissionType type, {
+    int amount = 1,
+    int? atLeast,
+  }) async {
     var changed = false;
     dailyMissions = dailyMissions.map((mission) {
       if (mission.type != type || mission.claimed) return mission;
@@ -287,7 +297,6 @@ class GameController extends ChangeNotifier {
     notifyListeners();
     return true;
   }
-
 
   Future<void> _migrateContentState() async {
     const contentVersion = 5;
@@ -332,10 +341,14 @@ class GameController extends ChangeNotifier {
           final decoded = jsonDecode(rawHints) as Map<String, dynamic>;
           hints
             ..clear()
-            ..addAll(decoded.map((key, value) => MapEntry(
+            ..addAll(
+              decoded.map(
+                (key, value) => MapEntry(
                   key,
                   (value as List<dynamic>).map((e) => e as int).toSet(),
-                )));
+                ),
+              ),
+            );
         } catch (_) {
           hints.clear();
         }
@@ -371,6 +384,32 @@ class GameController extends ChangeNotifier {
     return Duration(milliseconds: max(0, remaining));
   }
 
+  String get nextHeartLabel {
+    if (hearts >= maxNaturalHearts) return 'Canlar dolu';
+    final remaining = nextHeartIn;
+    final totalSeconds = max(0, remaining.inSeconds);
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '+1 can ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  void _startHeartTicker() {
+    _heartTicker?.cancel();
+    _heartTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (hearts >= maxNaturalHearts) return;
+      unawaited(_tickHearts());
+    });
+  }
+
+  Future<void> _tickHearts() async {
+    final before = hearts;
+    await _refillHearts();
+    // Sayaç her saniye değiştiği için can kazanılmasa da arayüzü yenile.
+    if (before != hearts || hearts < maxNaturalHearts) {
+      notifyListeners();
+    }
+  }
+
   List<LetterFeedback> evaluateDaily(String guess) {
     final normalized = TurkishText.normalizeWord(guess);
     final answer = dailyWord;
@@ -404,7 +443,8 @@ class GameController extends ChangeNotifier {
     if (dailyFinished) return 'Bugünün kelimesini zaten tamamladın.';
     final normalized = TurkishText.normalizeWord(guess);
     if (normalized.length != 5) return 'Kelime 5 harfli olmalı.';
-    if (!dictionary.contains(normalized)) return 'Bu kelime oyun sözlüğünde bulunamadı.';
+    if (!dictionary.contains(normalized))
+      return 'Bu kelime oyun sözlüğünde bulunamadı.';
 
     dailyGuesses = [...dailyGuesses, normalized];
     final won = normalized == dailyWord;
@@ -455,7 +495,9 @@ class GameController extends ChangeNotifier {
 
   Future<ConquestResult> submitConquestWord(String raw) async {
     if (campaignCompleted) {
-      return ConquestResult.invalid('10.000 bölümün tamamını zaten fethettin. 👑');
+      return ConquestResult.invalid(
+        '10.000 bölümün tamamını zaten fethettin. 👑',
+      );
     }
     final word = TurkishText.normalizeWord(raw);
     if (word.length < 3) {
@@ -512,19 +554,24 @@ class GameController extends ChangeNotifier {
     }
     await storage.setInt('hearts', hearts);
     notifyListeners();
-    return ConquestResult.invalid('Kelime bulunamadı. 1 can kaybettin.', lostHeart: true);
+    return ConquestResult.invalid(
+      'Kelime bulunamadı. 1 can kaybettin.',
+      lostHeart: true,
+    );
   }
 
   String _comboMessage(int combo) => switch (combo) {
-        2 => 'İYİ!  ×2',
-        3 => 'HARİKA!  ×3',
-        4 => 'MUHTEŞEM!  ×4',
-        >= 5 => 'KELİME FATİHİ!  ×$combo 👑',
-        _ => '',
-      };
+    2 => 'İYİ!  ×2',
+    3 => 'HARİKA!  ×3',
+    4 => 'MUHTEŞEM!  ×4',
+    >= 5 => 'KELİME FATİHİ!  ×$combo 👑',
+    _ => '',
+  };
 
   Future<HintResult> useHint() async {
-    final missing = currentLevel.words.where((w) => !foundWords.contains(w)).toList();
+    final missing = currentLevel.words
+        .where((w) => !foundWords.contains(w))
+        .toList();
     if (missing.isEmpty) return const HintResult(false, false);
 
     final useFree = freeHints > 0;
@@ -533,8 +580,10 @@ class GameController extends ChangeNotifier {
     missing.sort((a, b) => a.length.compareTo(b.length));
     final word = missing.first;
     final revealed = hints.putIfAbsent(word, () => <int>{});
-    final nextIndex = List.generate(word.length, (i) => i)
-        .firstWhere((i) => !revealed.contains(i), orElse: () => -1);
+    final nextIndex = List.generate(
+      word.length,
+      (i) => i,
+    ).firstWhere((i) => !revealed.contains(i), orElse: () => -1);
     if (nextIndex < 0) return const HintResult(false, false);
 
     if (useFree) {
@@ -598,27 +647,44 @@ class GameController extends ChangeNotifier {
   }
 
   Future<ChestReward> _grantChest(int chestNumber) async {
-    final type = ChestRewardType.values[(chestNumber * 7 + 3) % ChestRewardType.values.length];
+    final type = ChestRewardType
+        .values[(chestNumber * 7 + 3) % ChestRewardType.values.length];
     late final ChestReward reward;
     switch (type) {
       case ChestRewardType.heart:
         hearts += 1;
         await storage.setInt('hearts', hearts);
-        reward = const ChestReward(type: ChestRewardType.heart, amount: 1, label: '+1 Can');
+        reward = const ChestReward(
+          type: ChestRewardType.heart,
+          amount: 1,
+          label: '+1 Can',
+        );
         break;
       case ChestRewardType.coins:
         coins += 5;
-        reward = const ChestReward(type: ChestRewardType.coins, amount: 5, label: '+5 Altın');
+        reward = const ChestReward(
+          type: ChestRewardType.coins,
+          amount: 5,
+          label: '+5 Altın',
+        );
         break;
       case ChestRewardType.freeHint:
         freeHints += 1;
         await storage.setInt('free_hints', freeHints);
-        reward = const ChestReward(type: ChestRewardType.freeHint, amount: 1, label: '+1 Ücretsiz İpucu');
+        reward = const ChestReward(
+          type: ChestRewardType.freeHint,
+          amount: 1,
+          label: '+1 Ücretsiz İpucu',
+        );
         break;
       case ChestRewardType.crownFragment:
         crownFragments += 1;
         await storage.setInt('crown_fragments', crownFragments);
-        reward = const ChestReward(type: ChestRewardType.crownFragment, amount: 1, label: '+1 Taç Parçası');
+        reward = const ChestReward(
+          type: ChestRewardType.crownFragment,
+          amount: 1,
+          label: '+1 Taç Parçası',
+        );
         break;
     }
     return reward;
@@ -756,12 +822,18 @@ class GameController extends ChangeNotifier {
             totalWordsFound,
             (cloud['totalWordsFound'] as num?)?.toInt() ?? 0,
           );
-          dailyWins = max(dailyWins, (cloud['dailyWins'] as num?)?.toInt() ?? 0);
+          dailyWins = max(
+            dailyWins,
+            (cloud['dailyWins'] as num?)?.toInt() ?? 0,
+          );
           bestDailyStreak = max(
             bestDailyStreak,
             (cloud['bestDailyStreak'] as num?)?.toInt() ?? 0,
           );
-          bestCombo = max(bestCombo, (cloud['bestCombo'] as num?)?.toInt() ?? 0);
+          bestCombo = max(
+            bestCombo,
+            (cloud['bestCombo'] as num?)?.toInt() ?? 0,
+          );
           crownFragments = max(
             crownFragments,
             (cloud['crownFragments'] as num?)?.toInt() ?? 0,
@@ -788,14 +860,14 @@ class GameController extends ChangeNotifier {
   }
 
   Map<String, dynamic> _cloudProgressMap() => <String, dynamic>{
-        'levelNumber': levelNumber,
-        'levelsCompleted': levelsCompleted,
-        'totalWordsFound': totalWordsFound,
-        'dailyWins': dailyWins,
-        'bestDailyStreak': bestDailyStreak,
-        'bestCombo': bestCombo,
-        'crownFragments': crownFragments,
-      };
+    'levelNumber': levelNumber,
+    'levelsCompleted': levelsCompleted,
+    'totalWordsFound': totalWordsFound,
+    'dailyWins': dailyWins,
+    'bestDailyStreak': bestDailyStreak,
+    'bestCombo': bestCombo,
+    'crownFragments': crownFragments,
+  };
 
   void _scheduleCloudSync() {
     if (!account.signedIn) return;
@@ -808,6 +880,7 @@ class GameController extends ChangeNotifier {
   @override
   void dispose() {
     _cloudSyncTimer?.cancel();
+    _heartTicker?.cancel();
     super.dispose();
   }
 
@@ -852,17 +925,18 @@ class ConquestResult {
     String word, {
     required bool completed,
     required String comboMessage,
-  }) =>
-      ConquestResult._(
-        message: completed ? 'Bölge fethedildi!' : '${TurkishText.upper(word)} bulundu!',
-        isTarget: true,
-        isBonus: false,
-        completed: completed,
-        lostHeart: false,
-        noHearts: false,
-        isDuplicate: false,
-        comboMessage: comboMessage,
-      );
+  }) => ConquestResult._(
+    message: completed
+        ? 'Bölge fethedildi!'
+        : '${TurkishText.upper(word)} bulundu!',
+    isTarget: true,
+    isBonus: false,
+    completed: completed,
+    lostHeart: false,
+    noHearts: false,
+    isDuplicate: false,
+    comboMessage: comboMessage,
+  );
 
   factory ConquestResult.bonus(String word, {required String comboMessage}) =>
       ConquestResult._(
@@ -877,15 +951,15 @@ class ConquestResult {
       );
 
   factory ConquestResult.duplicate(String word) => ConquestResult._(
-        message: '${TurkishText.upper(word)} bu bölümde zaten kullanıldı.',
-        isTarget: false,
-        isBonus: false,
-        completed: false,
-        lostHeart: false,
-        noHearts: false,
-        isDuplicate: true,
-        comboMessage: '',
-      );
+    message: '${TurkishText.upper(word)} bu bölümde zaten kullanıldı.',
+    isTarget: false,
+    isBonus: false,
+    completed: false,
+    lostHeart: false,
+    noHearts: false,
+    isDuplicate: true,
+    comboMessage: '',
+  );
 
   factory ConquestResult.invalid(String message, {bool lostHeart = false}) =>
       ConquestResult._(
@@ -900,13 +974,13 @@ class ConquestResult {
       );
 
   factory ConquestResult.noHeart() => const ConquestResult._(
-        message: 'Canın kalmadı. Reklam izle veya mağazadan can al.',
-        isTarget: false,
-        isBonus: false,
-        completed: false,
-        lostHeart: false,
-        noHearts: true,
-        isDuplicate: false,
-        comboMessage: '',
-      );
+    message: 'Canın kalmadı. Reklam izle veya mağazadan can al.',
+    isTarget: false,
+    isBonus: false,
+    completed: false,
+    lostHeart: false,
+    noHearts: true,
+    isDuplicate: false,
+    comboMessage: '',
+  );
 }

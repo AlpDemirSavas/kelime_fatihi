@@ -26,7 +26,10 @@ class AudioService {
     unawaited(
       _musicPlayer.stop().then((_) async {
         await _musicPlayer.setReleaseMode(ReleaseMode.loop);
-        await _musicPlayer.play(AssetSource('audio/region_$theme.wav'), volume: .075);
+        await _musicPlayer.play(
+          AssetSource('audio/region_$theme.wav'),
+          volume: .075,
+        );
       }),
     );
   }
@@ -43,7 +46,11 @@ class AudioService {
 
   void _play(AudioPlayer player, String asset, {required double volume}) {
     if (!enabled) return;
-    unawaited(player.stop().then((_) => player.play(AssetSource(asset), volume: volume)));
+    unawaited(
+      player.stop().then(
+        (_) => player.play(AssetSource(asset), volume: volume),
+      ),
+    );
   }
 
   Future<void> dispose() async {

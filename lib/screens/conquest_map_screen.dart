@@ -44,13 +44,17 @@ class ConquestMapScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _RegionCard(
-                    region: ConquestRegion.forLevel(index * ConquestRegion.regionSize + 1),
+                    region: ConquestRegion.forLevel(
+                      index * ConquestRegion.regionSize + 1,
+                    ),
                     currentLevel: game.levelNumber,
                     onPlay: index == current.index && !game.campaignCompleted
                         ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ConquestScreen()),
-                            )
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ConquestScreen(),
+                            ),
+                          )
                         : null,
                   ),
                 ),
@@ -93,9 +97,12 @@ class _RegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completed = currentLevel > region.endLevel;
-    final current = currentLevel >= region.startLevel && currentLevel <= region.endLevel;
+    final current =
+        currentLevel >= region.startLevel && currentLevel <= region.endLevel;
     final locked = currentLevel < region.startLevel;
-    final progress = completed ? ConquestRegion.regionSize : (current ? region.progressFor(currentLevel) - 1 : 0);
+    final progress = completed
+        ? ConquestRegion.regionSize
+        : (current ? region.progressFor(currentLevel) - 1 : 0);
 
     return Opacity(
       opacity: locked ? .48 : 1,
@@ -114,11 +121,17 @@ class _RegionCard extends StatelessWidget {
                     children: [
                       Text(
                         region.name,
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
+                        ),
                       ),
                       Text(
                         region.subtitle,
-                        style: TextStyle(color: Colors.white.withValues(alpha: .58), fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .58),
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -127,8 +140,8 @@ class _RegionCard extends StatelessWidget {
                   completed
                       ? Icons.workspace_premium_rounded
                       : locked
-                          ? Icons.lock_rounded
-                          : Icons.play_arrow_rounded,
+                      ? Icons.lock_rounded
+                      : Icons.play_arrow_rounded,
                   color: region.accent,
                 ),
               ],
@@ -148,11 +161,18 @@ class _RegionCard extends StatelessWidget {
               children: [
                 Text(
                   'Bölüm ${region.startLevel}-${region.endLevel}',
-                  style: TextStyle(color: Colors.white.withValues(alpha: .55), fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .55),
+                    fontSize: 12,
+                  ),
                 ),
                 const Spacer(),
                 Text(
-                  completed ? 'TAMAMLANDI' : current ? '$progress/${ConquestRegion.regionSize}' : 'KİLİTLİ',
+                  completed
+                      ? 'TAMAMLANDI'
+                      : current
+                      ? '$progress/${ConquestRegion.regionSize}'
+                      : 'KİLİTLİ',
                   style: TextStyle(
                     color: region.accent,
                     fontWeight: FontWeight.w900,

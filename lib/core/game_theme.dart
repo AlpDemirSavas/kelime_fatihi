@@ -26,7 +26,10 @@ class GameTheme {
       scaffoldBackgroundColor: midnight,
       fontFamily: 'sans-serif',
       textTheme: const TextTheme(
-        displaySmall: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -1.2),
+        displaySmall: TextStyle(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1.2,
+        ),
         headlineMedium: TextStyle(fontWeight: FontWeight.w900),
         titleLarge: TextStyle(fontWeight: FontWeight.w800),
         titleMedium: TextStyle(fontWeight: FontWeight.w700),

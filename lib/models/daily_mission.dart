@@ -22,35 +22,35 @@ class DailyMission {
   bool get completed => progress >= target;
 
   DailyMission copyWith({int? progress, bool? claimed}) => DailyMission(
-        id: id,
-        type: type,
-        title: title,
-        target: target,
-        reward: reward,
-        progress: progress ?? this.progress,
-        claimed: claimed ?? this.claimed,
-      );
+    id: id,
+    type: type,
+    title: title,
+    target: target,
+    reward: reward,
+    progress: progress ?? this.progress,
+    claimed: claimed ?? this.claimed,
+  );
 
   Map<String, Object> toJson() => {
-        'id': id,
-        'type': type.name,
-        'title': title,
-        'target': target,
-        'reward': reward,
-        'progress': progress,
-        'claimed': claimed,
-      };
+    'id': id,
+    'type': type.name,
+    'title': title,
+    'target': target,
+    'reward': reward,
+    'progress': progress,
+    'claimed': claimed,
+  };
 
   factory DailyMission.fromJson(Map<String, dynamic> json) => DailyMission(
-        id: json['id'] as String,
-        type: MissionType.values.firstWhere(
-          (value) => value.name == json['type'],
-          orElse: () => MissionType.targetWords,
-        ),
-        title: json['title'] as String,
-        target: json['target'] as int,
-        reward: json['reward'] as int,
-        progress: json['progress'] as int? ?? 0,
-        claimed: json['claimed'] as bool? ?? false,
-      );
+    id: json['id'] as String,
+    type: MissionType.values.firstWhere(
+      (value) => value.name == json['type'],
+      orElse: () => MissionType.targetWords,
+    ),
+    title: json['title'] as String,
+    target: json['target'] as int,
+    reward: json['reward'] as int,
+    progress: json['progress'] as int? ?? 0,
+    claimed: json['claimed'] as bool? ?? false,
+  );
 }

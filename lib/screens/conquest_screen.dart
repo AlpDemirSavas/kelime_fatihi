@@ -64,7 +64,10 @@ class _ConquestScreenState extends State<ConquestScreen> {
 
     if (game.campaignCompleted) {
       return Scaffold(
-        appBar: AppBar(backgroundColor: Colors.transparent, title: const Text('Kelime Fatihi')),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('Kelime Fatihi'),
+        ),
         extendBodyBehindAppBar: true,
         body: AnimatedBackground(
           accent: region.accent,
@@ -78,16 +81,27 @@ class _ConquestScreenState extends State<ConquestScreen> {
                     children: [
                       const Text('👑', style: TextStyle(fontSize: 72)),
                       const SizedBox(height: 14),
-                      Text('10.000 BÖLÜM FETHEDİLDİ', style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+                      Text(
+                        '10.000 BÖLÜM FETHEDİLDİ',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 10),
                       Text(
                         'Kelime Fatihi seferinin tamamını bitirdin. Bu noktaya ulaşmak oyunun en büyük başarısıdır.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white.withValues(alpha: .68)),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .68),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       FilledButton.icon(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConquestMapScreen())),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ConquestMapScreen(),
+                          ),
+                        ),
                         icon: const Icon(Icons.map_rounded),
                         label: const Text('FETİH HARİTASINI GÖR'),
                       ),
@@ -116,11 +130,31 @@ class _ConquestScreenState extends State<ConquestScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Center(child: TopStats(hearts: game.hearts, coins: game.coins)),
+            child: Center(
+              child: TopStats(
+                hearts: game.hearts,
+                coins: game.coins,
+                heartTimer: game.hearts < GameController.maxNaturalHearts
+                    ? game.nextHeartLabel
+                    : null,
+              ),
+            ),
           ),
         ],
       ),
       extendBodyBehindAppBar: true,
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'bonus_words',
+        onPressed: () => _showBonusWords(game),
+        backgroundColor: const Color(0xFF173B60),
+        foregroundColor: GameTheme.gold,
+        icon: const Icon(Icons.stars_rounded),
+        label: Text(
+          'Bonus ${game.bonusWords.length}',
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       body: CelebrationOverlay(
         active: celebrate,
         child: AnimatedBackground(
@@ -131,36 +165,59 @@ class _ConquestScreenState extends State<ConquestScreen> {
                 const SizedBox(height: 54),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 92),
                     children: [
                       GlassCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 11,
+                        ),
                         child: Row(
                           children: [
-                            Text(region.emoji, style: const TextStyle(fontSize: 22)),
+                            Text(
+                              region.emoji,
+                              style: const TextStyle(fontSize: 22),
+                            ),
                             const SizedBox(width: 9),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(region.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+                                  Text(
+                                    region.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                   Text(
                                     'Bölge ${region.progressFor(level.number)}/${ConquestRegion.regionSize} • Sandığa $chestIn bölüm',
-                                    style: TextStyle(color: Colors.white.withValues(alpha: .55), fontSize: 11),
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: .55,
+                                      ),
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             if (game.comboCount >= 2)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: region.accent.withValues(alpha: .12),
                                   borderRadius: BorderRadius.circular(99),
                                 ),
                                 child: Text(
                                   '×${game.comboCount} COMBO',
-                                  style: TextStyle(color: region.accent, fontWeight: FontWeight.w900, fontSize: 11),
+                                  style: TextStyle(
+                                    color: region.accent,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ),
                           ],
@@ -170,11 +227,18 @@ class _ConquestScreenState extends State<ConquestScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text('Kelime Bölgesi', style: Theme.of(context).textTheme.headlineMedium),
+                            child: Text(
+                              'Kelime Bölgesi',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
                           ),
                           Text(
                             '${game.foundWords.length}/${level.words.length}',
-                            style: TextStyle(color: region.accent, fontWeight: FontWeight.w900, fontSize: 18),
+                            style: TextStyle(
+                              color: region.accent,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
                           ),
                         ],
                       ),
@@ -188,12 +252,19 @@ class _ConquestScreenState extends State<ConquestScreen> {
                             final found = game.foundWords.contains(word);
                             return AnimatedContainer(
                               duration: const Duration(milliseconds: 240),
-                              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
-                                color: found ? GameTheme.mint.withValues(alpha: .9) : Colors.black.withValues(alpha: .2),
+                                color: found
+                                    ? GameTheme.mint.withValues(alpha: .9)
+                                    : Colors.black.withValues(alpha: .2),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: found ? GameTheme.mint : Colors.white.withValues(alpha: .11),
+                                  color: found
+                                      ? GameTheme.mint
+                                      : Colors.white.withValues(alpha: .11),
                                 ),
                               ),
                               child: Text(
@@ -201,7 +272,9 @@ class _ConquestScreenState extends State<ConquestScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.4,
-                                  color: found ? const Color(0xFF061A16) : Colors.white,
+                                  color: found
+                                      ? const Color(0xFF061A16)
+                                      : Colors.white,
                                 ),
                               ),
                             );
@@ -226,15 +299,18 @@ class _ConquestScreenState extends State<ConquestScreen> {
                                 ),
                               )
                             : flash.isEmpty
-                                ? const SizedBox(height: 30)
-                                : Center(
-                                    key: ValueKey(flash),
-                                    child: Text(
-                                      flash,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(color: region.accent, fontWeight: FontWeight.w900),
-                                    ),
+                            ? const SizedBox(height: 30)
+                            : Center(
+                                key: ValueKey(flash),
+                                child: Text(
+                                  flash,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: region.accent,
+                                    fontWeight: FontWeight.w900,
                                   ),
+                                ),
+                              ),
                       ),
                       Center(
                         child: LetterWheel(
@@ -259,65 +335,24 @@ class _ConquestScreenState extends State<ConquestScreen> {
                               if (!mounted) return;
                               _show(
                                 result.used
-                                    ? (result.usedFreeHint ? 'Ücretsiz ipucu kullanıldı!' : 'Bir harf açıldı! −25 altın')
+                                    ? (result.usedFreeHint
+                                          ? 'Ücretsiz ipucu kullanıldı!'
+                                          : 'Bir harf açıldı! −25 altın')
                                     : 'İpucu için 25 altın gerekiyor.',
                               );
                             },
                             icon: const Icon(Icons.lightbulb_rounded),
                             label: Text(
-                              game.freeHints > 0 ? 'İpucu · Ücretsiz ${game.freeHints}' : 'İpucu · 25',
-                              style: const TextStyle(fontWeight: FontWeight.w800),
+                              game.freeHints > 0
+                                  ? 'İpucu · Ücretsiz ${game.freeHints}'
+                                  : 'İpucu · 25',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      if (game.bonusWords.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        GlassCard(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.stars_rounded, color: GameTheme.gold, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Bulduğun Bonus Kelimeler (${game.bonusWords.length})',
-                                    style: const TextStyle(fontWeight: FontWeight.w900),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Bu bölümde ilk kez bulduğun her kelime +1 altın verir. Kelimeye dokununca ödül bilgisini görebilirsin.',
-                                style: TextStyle(color: Colors.white.withValues(alpha: .55), fontSize: 11),
-                              ),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 7,
-                                runSpacing: 7,
-                                children: game.sortedBonusWords
-                                    .map(
-                                      (word) => ActionChip(
-                                        avatar: const Icon(Icons.add_circle_rounded, size: 16, color: GameTheme.gold),
-                                        label: Text(
-                                          '${TurkishText.upper(word)}  +1',
-                                          style: const TextStyle(fontWeight: FontWeight.w800),
-                                        ),
-                                        onPressed: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('${TurkishText.upper(word)} kelimesinden +1 altın kazandın.')),
-                                          );
-                                        },
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -370,10 +405,16 @@ class _ConquestScreenState extends State<ConquestScreen> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-          title: Text(game.currentLevel.number == 10000 ? '🏆 Büyük Sefer Tamamlandı!' : '👑 Bölüm Fethedildi!'),
-          content: Text(game.currentLevel.number == 10000
-              ? '10.000. bölümü de tamamladın. Son bölüm ödülü: +5 altın.'
-              : 'Tüm hedef kelimeleri buldun. Bölüm ödülü: +5 altın.'),
+          title: Text(
+            game.currentLevel.number == 10000
+                ? '🏆 Büyük Sefer Tamamlandı!'
+                : '👑 Bölüm Fethedildi!',
+          ),
+          content: Text(
+            game.currentLevel.number == 10000
+                ? '10.000. bölümü de tamamladın. Son bölüm ödülü: +5 altın.'
+                : 'Tüm hedef kelimeleri buldun. Bölüm ödülü: +5 altın.',
+          ),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -412,7 +453,10 @@ class _ConquestScreenState extends State<ConquestScreen> {
           children: [
             const Text('✨', style: TextStyle(fontSize: 54)),
             const SizedBox(height: 8),
-            Text(reward.label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+            Text(
+              reward.label,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 8),
             const Text('Her 5 bölümde bir yeni sandık kazanırsın.'),
           ],
@@ -437,11 +481,20 @@ class _ConquestScreenState extends State<ConquestScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.favorite_border_rounded, size: 52, color: GameTheme.danger),
+            const Icon(
+              Icons.favorite_border_rounded,
+              size: 52,
+              color: GameTheme.danger,
+            ),
             const SizedBox(height: 10),
-            const Text('Canın tükendi', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+            const Text(
+              'Canın tükendi',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 8),
-            const Text('Reklam izleyebilir, mağazada 50 altın karşılığında 1 can alabilir veya can paketi satın alabilirsin.'),
+            const Text(
+              'Reklam izleyebilir, mağazada 50 altın karşılığında 1 can alabilir veya can paketi satın alabilirsin.',
+            ),
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: () async {
@@ -454,7 +507,10 @@ class _ConquestScreenState extends State<ConquestScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(sheetContext);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StoreScreen()),
+                );
               },
               child: const Text('MAĞAZAYA GİT'),
             ),
@@ -464,7 +520,98 @@ class _ConquestScreenState extends State<ConquestScreen> {
     );
   }
 
+  Future<void> _showBonusWords(GameController game) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF0A2138),
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final words = game.sortedBonusWords;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.stars_rounded, color: GameTheme.gold),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Bonus Kelimeler (${words.length})',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 19,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Bu bölümde ilk kez bulduğun her bonus kelime +1 altın kazandırır.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .62),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (words.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        'Henüz bonus kelime bulmadın.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .6),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: words.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(color: Colors.white.withValues(alpha: .08)),
+                      itemBuilder: (_, index) {
+                        final word = words[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0x2235D8FF),
+                            child: Icon(
+                              Icons.add_rounded,
+                              color: GameTheme.gold,
+                            ),
+                          ),
+                          title: Text(
+                            TurkishText.upper(word),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          trailing: const Text(
+                            '+1 altın',
+                            style: TextStyle(
+                              color: GameTheme.gold,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _show(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

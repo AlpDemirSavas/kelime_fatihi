@@ -46,7 +46,8 @@ class AccountService extends ChangeNotifier {
       return null;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return null;
-      errorMessage = 'Google ile giriş başarısız: ${e.description ?? e.code.name}';
+      errorMessage =
+          'Google ile giriş başarısız: ${e.description ?? e.code.name}';
       notifyListeners();
       return errorMessage;
     } on FirebaseAuthException catch (e) {
@@ -54,7 +55,8 @@ class AccountService extends ChangeNotifier {
       notifyListeners();
       return errorMessage;
     } catch (_) {
-      errorMessage = 'Google ile giriş tamamlanamadı. İnternet ve Firebase ayarlarını kontrol et.';
+      errorMessage =
+          'Google ile giriş tamamlanamadı. İnternet ve Firebase ayarlarını kontrol et.';
       notifyListeners();
       return errorMessage;
     }
@@ -77,7 +79,8 @@ class AccountService extends ChangeNotifier {
       notifyListeners();
       return errorMessage;
     } catch (_) {
-      errorMessage = 'Apple ile giriş tamamlanamadı. Apple/Firebase yapılandırmasını kontrol et.';
+      errorMessage =
+          'Apple ile giriş tamamlanamadı. Apple/Firebase yapılandırmasını kontrol et.';
       notifyListeners();
       return errorMessage;
     }
@@ -113,17 +116,18 @@ class AccountService extends ChangeNotifier {
     final current = user;
     if (current == null) return;
     try {
-      await FirebaseFirestore.instance.collection('players').doc(current.uid).set(
-        <String, dynamic>{
-          ...progress,
-          'uid': current.uid,
-          'email': current.email,
-          'displayName': current.displayName,
-          'updatedAt': FieldValue.serverTimestamp(),
-          'schemaVersion': 1,
-        },
-        SetOptions(merge: true),
-      ).timeout(const Duration(seconds: 5));
+      await FirebaseFirestore.instance
+          .collection('players')
+          .doc(current.uid)
+          .set(<String, dynamic>{
+            ...progress,
+            'uid': current.uid,
+            'email': current.email,
+            'displayName': current.displayName,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'schemaVersion': 1,
+          }, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 5));
     } catch (_) {
       // Offline durumda oyun yerel kayıtta devam eder. Firestore mobil SDK kendi
       // önbelleğini kullanır; sonraki senkron denemesinde tekrar gönderilir.
@@ -137,19 +141,28 @@ class AccountService extends ChangeNotifier {
       // Apple, Sign in with Apple kullanan uygulamalarda hesap silinirken
       // yetkilendirme token'ının da iptal edilmesini ister. Firebase bu işlem
       // için yeni bir Apple authorization code ile revoke API'si sunar.
-      final usesApple = current.providerData.any((p) => p.providerId == 'apple.com');
+      final usesApple = current.providerData.any(
+        (p) => p.providerId == 'apple.com',
+      );
       if (usesApple && Platform.isIOS) {
         final provider = AppleAuthProvider()
           ..addScope('email')
           ..addScope('name');
-        final credential = await FirebaseAuth.instance.signInWithProvider(provider);
+        final credential = await FirebaseAuth.instance.signInWithProvider(
+          provider,
+        );
         final authCode = credential.additionalUserInfo?.authorizationCode;
         if (authCode != null && authCode.isNotEmpty) {
-          await FirebaseAuth.instance.revokeTokenWithAuthorizationCode(authCode);
+          await FirebaseAuth.instance.revokeTokenWithAuthorizationCode(
+            authCode,
+          );
         }
       }
 
-      await FirebaseFirestore.instance.collection('players').doc(current.uid).delete();
+      await FirebaseFirestore.instance
+          .collection('players')
+          .doc(current.uid)
+          .delete();
       await FirebaseAuth.instance.currentUser?.delete();
       try {
         await GoogleSignIn.instance.disconnect();

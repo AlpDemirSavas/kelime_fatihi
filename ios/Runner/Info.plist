@@ -104,10 +104,11 @@
             </array>
         </dict>
     </array>
-
     <!-- AdMob iOS App ID -->
     <key>GADApplicationIdentifier</key>
     <string>ca-app-pub-7947363274814419~9478418238</string>
+<key>NSUserTrackingUsageDescription</key>
+<string>Bu izin, size daha alakalı reklamlar göstermek ve reklam performansını ölçmek için kullanılır.</string>
 
 </dict>
 </plist>

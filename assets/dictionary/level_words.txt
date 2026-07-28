@@ -1,6 +1,4 @@
-aaa
 aaah
-aah
 aba
 abadi
 abajur
@@ -152,7 +150,6 @@ afal
 afalla
 afat
 afazi
-afed
 afedersin
 aferin
 aferist
@@ -204,7 +201,6 @@ agrega
 agreman
 agresif
 agronomi
-agu
 agucuk
 agula
 aguş
@@ -662,7 +658,6 @@ alşimi
 alşimist
 ama
 amabile
-amacı
 amade
 amal
 amalgam
@@ -1263,7 +1258,6 @@ asık
 asıl
 asılan
 asıltı
-asılı
 asım
 asıntı
 asır
@@ -2238,7 +2232,6 @@ bekaret
 bekarhane
 bekas
 bekin
-bekit
 bekle
 beklenmez
 beklenti
@@ -2773,7 +2766,6 @@ bohem
 bohriyum
 bohça
 bohçala
-bok
 bokla
 boks
 boksit
@@ -3136,12 +3128,10 @@ bört
 börtü
 börtük
 börülce
-bös
 böyle
 böylece
 böylecene
 böylesine
-böğ
 böğür
 böğürtlen
 böğürtü
@@ -6381,7 +6371,6 @@ fıldır
 fındık
 fındıki
 fır
-fırat
 fırdolayı
 fırdöndü
 fırfır
@@ -7053,7 +7042,6 @@ göstergeç
 gösteri
 gösterim
 gösteriş
-göt
 götün
 götür
 götürü
@@ -8301,7 +8289,6 @@ ibiş
 iblağ
 iblis
 iblisane
-ibne
 ibra
 ibraname
 ibraz
@@ -8851,7 +8838,6 @@ iskota
 isle
 islim
 ismen
-ismet
 isnaden
 isnat
 isot
@@ -9009,7 +8995,6 @@ itizar
 itiş
 itki
 itlaf
-itlen
 itmam
 itminan
 itoğluit
@@ -9975,7 +9960,6 @@ kavalye
 kavanoz
 kavanço
 kavara
-kavas
 kavasya
 kavat
 kavata
@@ -11719,7 +11703,6 @@ kızılçam
 kızılşap
 kızış
 kızışık
-kıç
 kıçüstü
 kığ
 kığı
@@ -12191,7 +12174,6 @@ magmatik
 magnezit
 magnezyum
 magri
-mah
 mahal
 mahalle
 mahalli
@@ -14811,7 +14793,6 @@ ornat
 ornitolog
 orografya
 orojeni
-orospu
 orostopol
 orsa
 orsala
@@ -15493,7 +15474,6 @@ pirekapan
 pirekıran
 pirelen
 pireler
-piri
 pirifani
 pirina
 pirinç
@@ -15546,7 +15526,6 @@ pizolit
 pizza
 pizzacı
 pizzicato
-piç
 piçsinek
 piçuta
 piş
@@ -15842,7 +15821,6 @@ put
 putperest
 putrel
 puzzle
-puşt
 pöf
 pöhrenk
 pörsü
@@ -17260,7 +17238,6 @@ sigortala
 sihir
 sihirbaz
 sihirlen
-sik
 sika
 sikalar
 sikatif
@@ -19857,7 +19834,6 @@ tüyo
 tüze
 tüzel
 tüzük
-tüü
 tıbben
 tıbbi
 tıbbiye
@@ -21119,7 +21095,6 @@ yongar
 yont
 yontu
 yontuk
-yoo
 yor
 yordam
 yorga
@@ -22594,7 +22569,6 @@ zıypak
 özür
 özürlü
 özüt
-ööf
 öğle
 öğleleri
 öğlen

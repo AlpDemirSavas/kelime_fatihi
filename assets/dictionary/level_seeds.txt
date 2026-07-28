@@ -77,7 +77,7 @@ belge
 özgür
 kolay
 anlık
-fırat
+sezgi
 davul
 pamuk
 evrak
@@ -176,7 +176,7 @@ maket
 kulak
 koyun
 gelin
-asılı
+çetin
 karın
 resim
 ırgat
@@ -265,7 +265,7 @@ hakim
 ikbal
 kayıt
 balet
-ismet
+ölçüt
 satir
 katla
 ilzam
@@ -300,7 +300,7 @@ ayrık
 malen
 akson
 mizan
-seçik
+seçki
 anlat
 ilhan
 kavis
@@ -363,7 +363,7 @@ eksil
 palas
 ameli
 tariz
-etlik
+tikel
 hamsi
 kemir
 fanti
@@ -374,7 +374,7 @@ patır
 hakir
 fakir
 katış
-itlen
+nitel
 salya
 bariz
 sakar
@@ -636,7 +636,7 @@ kıvra
 telaş
 batır
 sefil
-bekit
+betik
 bolar
 dival
 temas
@@ -684,7 +684,7 @@ bardo
 borsa
 trafo
 adlan
-kavas
+savak
 kutla
 deriş
 yazık
@@ -904,7 +904,7 @@ pufla
 mizaç
 kavra
 yamak
-kumar
+kuram
 itmam
 rafya
 kaçta
@@ -4461,7 +4461,7 @@ türküle
 ablatya
 patırda
 balhane
-tenisçi
+çisenti
 bazofil
 bulgari
 evirtik

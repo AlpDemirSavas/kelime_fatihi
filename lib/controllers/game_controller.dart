@@ -299,13 +299,15 @@ class GameController extends ChangeNotifier {
   }
 
   Future<void> _migrateContentState() async {
-    const contentVersion = 5;
+    const contentVersion = 7;
     final storedVersion = await storage.getInt('content_version', 0);
     if (storedVersion >= contentVersion) return;
 
-    // V5 changes the deterministic level seed map. Keep the player's economy
-    // and reached level, but restart only the currently-open level so old V4
-    // found-word/hint state cannot leak into a different V5 board.
+    // V7 globally re-optimizes the 10,000-level campaign: target lists are
+    // frequency/curation ranked and wheel-size boundaries are aligned with
+    // target-count difficulty. Keep economy and reached level, but restart
+    // only the currently-open board so old found-word/hint state cannot leak
+    // into the remapped campaign.
     await storage.setInt('active_level_number', -1);
     await storage.setStringList('found_words', const <String>[]);
     await storage.setStringList('bonus_words', const <String>[]);

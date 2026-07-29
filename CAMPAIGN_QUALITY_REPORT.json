@@ -1,0 +1,399 @@
+{
+  "version": 7,
+  "baseline": "V6 dictionary-quality runtime random targets",
+  "same_level_signature_positions_vs_v6": 9,
+  "signature_set_overlap_vs_v6": 8063,
+  "unique_wheels": 10000,
+  "wheel_length_counts": {
+    "5": 999,
+    "6": 2000,
+    "7": 2500,
+    "8": 2500,
+    "9": 2001
+  },
+  "all_exact_target_count": true,
+  "levels_with_full_wheel_answer": 3590,
+  "levels_with_curated_answer": 9446,
+  "mandatory_total": 82405,
+  "mandatory_unique": 6146,
+  "mandatory_max_repeat": 97,
+  "mandatory_length_counts": {
+    "3": 12935,
+    "4": 29430,
+    "5": 30071,
+    "6": 6799,
+    "7": 1995,
+    "8": 785,
+    "9": 390
+  },
+  "mandatory_frequency_or_curated_pct": 100.0,
+  "median_frequency_rank": 8358.0,
+  "adjacent_wheel_similarity_mean": 0.15196233909105195,
+  "adjacent_wheel_similarity_p90": 0.3333333333333333,
+  "adjacent_wheel_similarity_max": 0.8888888888888888,
+  "adjacent_wheel_similarity_ge075": 31,
+  "adjacent_target_jaccard_mean": 7.138824739625068e-05,
+  "adjacent_target_jaccard_max": 0.16666666666666666,
+  "most_repeated": [
+    [
+      "ter",
+      97
+    ],
+    [
+      "alan",
+      84
+    ],
+    [
+      "tren",
+      83
+    ],
+    [
+      "dana",
+      81
+    ],
+    [
+      "saat",
+      80
+    ],
+    [
+      "kara",
+      79
+    ],
+    [
+      "alaka",
+      79
+    ],
+    [
+      "tas",
+      78
+    ],
+    [
+      "masa",
+      77
+    ],
+    [
+      "olta",
+      77
+    ],
+    [
+      "abla",
+      76
+    ],
+    [
+      "para",
+      76
+    ],
+    [
+      "hane",
+      76
+    ],
+    [
+      "kart",
+      75
+    ],
+    [
+      "arma",
+      75
+    ],
+    [
+      "ayna",
+      74
+    ],
+    [
+      "yeni",
+      74
+    ],
+    [
+      "leke",
+      73
+    ],
+    [
+      "arsa",
+      73
+    ],
+    [
+      "aile",
+      72
+    ],
+    [
+      "tel",
+      71
+    ],
+    [
+      "elek",
+      71
+    ],
+    [
+      "nar",
+      71
+    ],
+    [
+      "alay",
+      70
+    ],
+    [
+      "ayak",
+      69
+    ]
+  ],
+  "examples": {
+    "1": {
+      "seed": "karın",
+      "targets": [
+        "karın",
+        "kıran",
+        "kanı",
+        "karı",
+        "kan"
+      ]
+    },
+    "10": {
+      "seed": "teker",
+      "targets": [
+        "teker",
+        "etek",
+        "kere",
+        "terk",
+        "ter"
+      ]
+    },
+    "50": {
+      "seed": "bakır",
+      "targets": [
+        "bakır",
+        "bırak",
+        "barı",
+        "karı",
+        "arı"
+      ]
+    },
+    "99": {
+      "seed": "arıza",
+      "targets": [
+        "arıza",
+        "azar",
+        "razı",
+        "rıza",
+        "azı"
+      ]
+    },
+    "100": {
+      "seed": "uyarı",
+      "targets": [
+        "uyarı",
+        "ayrı",
+        "ayır",
+        "uyar",
+        "yarı",
+        "arı"
+      ]
+    },
+    "500": {
+      "seed": "kayak",
+      "targets": [
+        "kayak",
+        "ayak",
+        "kaka",
+        "kaya",
+        "yaka",
+        "yak"
+      ]
+    },
+    "999": {
+      "seed": "salah",
+      "targets": [
+        "asla",
+        "hala",
+        "saha",
+        "hal",
+        "has",
+        "sal"
+      ]
+    },
+    "1000": {
+      "seed": "tırnak",
+      "targets": [
+        "tırnak",
+        "artık",
+        "kanıt",
+        "karın",
+        "takın",
+        "tanrı",
+        "tanık"
+      ]
+    },
+    "1500": {
+      "seed": "sürgün",
+      "targets": [
+        "sürgün",
+        "sürün",
+        "günü",
+        "sürü",
+        "ürün",
+        "gün",
+        "sür"
+      ]
+    },
+    "2999": {
+      "seed": "üryani",
+      "targets": [
+        "ayin",
+        "ayni",
+        "rüya",
+        "yani",
+        "ani",
+        "ray",
+        "yan"
+      ]
+    },
+    "3000": {
+      "seed": "kasıtlı",
+      "targets": [
+        "kasıtlı",
+        "satılık",
+        "tıkalı",
+        "katıl",
+        "takıl",
+        "ıslak",
+        "ıslık",
+        "ılık"
+      ]
+    },
+    "4000": {
+      "seed": "duruşma",
+      "targets": [
+        "duruşma",
+        "durum",
+        "dram",
+        "marş",
+        "dar",
+        "dua",
+        "dur",
+        "duş"
+      ]
+    },
+    "5499": {
+      "seed": "tesanüt",
+      "targets": [
+        "üstten",
+        "saten",
+        "üstat",
+        "üsten",
+        "sent",
+        "test",
+        "üste",
+        "süt"
+      ]
+    },
+    "5500": {
+      "seed": "parçacık",
+      "targets": [
+        "parçacık",
+        "apaçık",
+        "parkçı",
+        "çarpık",
+        "kıraç",
+        "parça",
+        "çarpı",
+        "çıkar",
+        "çırak"
+      ]
+    },
+    "6500": {
+      "seed": "hevessiz",
+      "targets": [
+        "hevessiz",
+        "evsiz",
+        "heves",
+        "hisse",
+        "vize",
+        "his",
+        "sev",
+        "sis",
+        "siz"
+      ]
+    },
+    "7999": {
+      "seed": "cümleten",
+      "targets": [
+        "cümle",
+        "temel",
+        "tümce",
+        "tümen",
+        "tünel",
+        "ünlem",
+        "emen",
+        "menü",
+        "men"
+      ]
+    },
+    "8000": {
+      "seed": "haksızlık",
+      "targets": [
+        "haksızlık",
+        "haksız",
+        "sazlık",
+        "haklı",
+        "hızla",
+        "hızlı",
+        "kazık",
+        "kılık",
+        "kısık",
+        "kızak"
+      ]
+    },
+    "9000": {
+      "seed": "kızılağaç",
+      "targets": [
+        "ağızlık",
+        "açıkla",
+        "kazağı",
+        "çığlık",
+        "kalça",
+        "kılıç",
+        "kızıl",
+        "ağaç",
+        "ağız",
+        "çağa"
+      ]
+    },
+    "9999": {
+      "seed": "frenoloji",
+      "targets": [
+        "eroin",
+        "erin",
+        "file",
+        "filo",
+        "fire",
+        "fren",
+        "lenf",
+        "fen",
+        "fil",
+        "fon"
+      ]
+    },
+    "10000": {
+      "seed": "inhibitör",
+      "targets": [
+        "bitir",
+        "bini",
+        "biri",
+        "bin",
+        "bir",
+        "bit",
+        "hit",
+        "ini",
+        "iri",
+        "tir"
+      ]
+    }
+  },
+  "before_v6": {
+    "mandatory_max_repeat": 231,
+    "three_letter_mandatory_targets": 28972,
+    "adjacent_wheel_similarity_mean": 0.34979220144236645,
+    "adjacent_wheel_similarity_ge075": 112,
+    "levels_with_curated_answer": 5447,
+    "levels_with_insufficient_nominal_targets": 1
+  }
+}

@@ -22,6 +22,28 @@ List<List<String>> _parseDictionaryPayload(List<String> texts) {
       .toList(growable: false);
 }
 
+List<List<String>> _parseLevelTargetPayload(String text) {
+  final rows = <List<String>>[];
+  for (final raw in const LineSplitter().convert(text)) {
+    final cleaned = raw.split('#').first.trim();
+    if (cleaned.isEmpty) continue;
+    final separator = cleaned.indexOf('|');
+    if (separator <= 0 || separator >= cleaned.length - 1) continue;
+
+    final signature = TurkishText.normalizeWord(
+      cleaned.substring(0, separator).trim(),
+    );
+    final words = cleaned
+        .substring(separator + 1)
+        .split(',')
+        .map((word) => TurkishText.normalizeWord(word.trim()))
+        .where((word) => word.length >= 3)
+        .toList(growable: false);
+    rows.add(<String>[signature, ...words]);
+  }
+  return rows;
+}
+
 class DictionaryService {
   static const int maxLevel = 10000;
 
@@ -29,6 +51,7 @@ class DictionaryService {
   final List<String> _dailyWords = <String>[];
   final Set<String> _levelWords = <String>{};
   final List<String> _seedWords = <String>[];
+  final List<List<String>> _levelTargets = <List<String>>[];
   final Map<String, List<String>> _levelWordsBySignature =
       <String, List<String>>{};
   bool _loaded = false;
@@ -49,29 +72,54 @@ class DictionaryService {
       rootBundle.loadString('assets/dictionary/play_words.txt'),
       rootBundle.loadString('assets/dictionary/level_words.txt'),
       rootBundle.loadString('assets/dictionary/level_seeds.txt'),
+      rootBundle.loadString('assets/dictionary/manual_surface_words.txt'),
+      rootBundle.loadString('assets/dictionary/reviewed_expansion_words.txt'),
+      rootBundle.loadString('assets/dictionary/blocked_words.txt'),
+      rootBundle.loadString('assets/dictionary/blocked_level_words.txt'),
+      rootBundle.loadString('assets/dictionary/level_targets.txt'),
     ]);
-    final parsed = await compute(_parseDictionaryPayload, rawAssets);
+    final parsed = await compute(
+      _parseDictionaryPayload,
+      rawAssets.take(9).toList(growable: false),
+    );
+    final parsedTargets = await compute(_parseLevelTargetPayload, rawAssets[9]);
 
-    _words
-      ..clear()
-      ..addAll(parsed[0]);
+    final blockedWords = parsed[7].toSet();
+    final blockedLevelWords = parsed[8].toSet();
+
     _dailyWords
       ..clear()
-      ..addAll(parsed[1].where((w) => w.length == 5));
+      ..addAll(
+        parsed[1].where(
+          (word) => word.length == 5 && !blockedWords.contains(word),
+        ),
+      );
 
     _levelWords
       ..clear()
       ..addAll(parsed[3])
-      ..addAll(parsed[2].where((w) => w.length >= 3 && w.length <= 9))
-      ..addAll(_dailyWords.where((w) => w.length >= 3 && w.length <= 9));
+      ..addAll(parsed[2].where((word) => word.length >= 3 && word.length <= 9))
+      ..addAll(parsed[6].where((word) => word.length >= 3 && word.length <= 9))
+      ..addAll(_dailyWords.where((word) => word.length >= 3 && word.length <= 9))
+      ..removeAll(blockedWords)
+      ..removeAll(blockedLevelWords);
 
     _words
+      ..clear()
+      ..addAll(parsed[0])
+      ..addAll(parsed[5])
+      ..addAll(parsed[6])
       ..addAll(_dailyWords)
-      ..addAll(_levelWords);
+      ..addAll(_levelWords)
+      ..removeAll(blockedWords);
 
     _seedWords
       ..clear()
-      ..addAll(parsed[4].where((w) => w.length >= 5 && w.length <= 9));
+      ..addAll(
+        parsed[4].where(
+          (word) => word.length >= 5 && word.length <= 9,
+        ),
+      );
 
     _levelWordsBySignature.clear();
     for (final word in _levelWords) {
@@ -82,8 +130,41 @@ class DictionaryService {
     if (_seedWords.length < maxLevel) {
       throw StateError(
         'Seviye tohumu eksik: ${_seedWords.length}/$maxLevel. '
-        'tool/build_quality_dictionary.py yeniden çalıştırılmalı.',
+        'tool/optimize_campaign.py yeniden çalıştırılmalı.',
       );
+    }
+
+    if (parsedTargets.length < maxLevel) {
+      throw StateError(
+        'Optimize hedef planı eksik: ${parsedTargets.length}/$maxLevel. '
+        'tool/optimize_campaign.py yeniden çalıştırılmalı.',
+      );
+    }
+
+    _levelTargets.clear();
+    for (var index = 0; index < maxLevel; index++) {
+      final row = parsedTargets[index];
+      final seed = _seedWords[index];
+      final expectedSignature = _signature(seed);
+      if (row.isEmpty || row.first != expectedSignature) {
+        throw StateError(
+          'Seviye ${index + 1} hedef imzası seed ile uyuşmuyor.',
+        );
+      }
+
+      final expectedCount = _targetCount(index + 1);
+      final targets = row.skip(1).toList(growable: false);
+      if (targets.length != expectedCount ||
+          targets.toSet().length != targets.length ||
+          targets.any(
+            (word) =>
+                !_levelWords.contains(word) || !_canBuildFrom(seed, word),
+          )) {
+        throw StateError(
+          'Seviye ${index + 1} optimize hedef planı geçersiz.',
+        );
+      }
+      _levelTargets.add(targets);
     }
 
     _loaded = true;
@@ -110,32 +191,43 @@ class DictionaryService {
     }
 
     final safeNumber = number.clamp(1, maxLevel).toInt();
-    // V6 has one prevalidated UNIQUE wheel signature per level for 1..10,000.
-    // Wheel size grows from 5 letters early in the campaign to 9 letters late.
+    // V7 has one prevalidated UNIQUE wheel signature per level for 1..10,000.
+    // Wheel size grows at the same boundaries as the mandatory target count.
     final seed = _seedWords[safeNumber - 1];
     final seeded = Random(safeNumber * 7919 + 104729);
+
+    // V7 mandatory answers are precomputed globally. The optimizer sees the
+    // whole 10,000-level campaign at once, so it can reduce repeated answers,
+    // favor curated/frequent vocabulary and keep adjacent boards dissimilar.
+    // This is deliberately not re-randomized at runtime.
+    final selected = _levelTargets.isNotEmpty
+        ? List<String>.from(_levelTargets[safeNumber - 1])
+        : _fallbackTargets(seed, safeNumber, seeded);
+
+    final letters = seed.split('')..shuffle(seeded);
+    return ConquestLevel(number: safeNumber, letters: letters, words: selected);
+  }
+
+  int _targetCount(int levelNumber) {
+    if (levelNumber < 100) return 5;
+    if (levelNumber < 1000) return 6;
+    if (levelNumber < 3000) return 7;
+    if (levelNumber < 5500) return 8;
+    if (levelNumber < 8000) return 9;
+    return 10;
+  }
+
+  List<String> _fallbackTargets(String seed, int levelNumber, Random seeded) {
     final words = _subWordsFor(seed).toList();
-
-    // Builder guarantees at least eight candidates. Later, larger wheels
-    // can expose more targets, but never more than are actually available.
-    final targetCount = safeNumber < 100
-        ? 5
-        : safeNumber < 1000
-        ? 6
-        : safeNumber < 3000
-        ? 7
-        : safeNumber < 5500
-        ? 8
-        : safeNumber < 8000
-        ? 9
-        : 10;
-
+    final targetCount = _targetCount(levelNumber);
     final sameSignature = words
         .where((word) => _signature(word) == _signature(seed))
         .toList();
     final mainWord = sameSignature.contains(seed)
         ? seed
-        : (sameSignature.isNotEmpty ? sameSignature.first : seed);
+        : (sameSignature.isNotEmpty
+              ? sameSignature.first
+              : (words.isNotEmpty ? words.first : seed));
     final others = words.where((word) => word != mainWord).toList()
       ..shuffle(seeded);
     final selected = <String>[
@@ -146,9 +238,20 @@ class DictionaryService {
       final length = b.length.compareTo(a.length);
       return length != 0 ? length : a.compareTo(b);
     });
+    return selected;
+  }
 
-    final letters = seed.split('')..shuffle(seeded);
-    return ConquestLevel(number: safeNumber, letters: letters, words: selected);
+  bool _canBuildFrom(String seed, String word) {
+    final available = <String, int>{};
+    for (final char in seed.split('')) {
+      available[char] = (available[char] ?? 0) + 1;
+    }
+    for (final char in word.split('')) {
+      final count = available[char] ?? 0;
+      if (count <= 0) return false;
+      available[char] = count - 1;
+    }
+    return true;
   }
 
   Iterable<String> _subWordsFor(String seed) sync* {

@@ -13,8 +13,12 @@ V6 policy
    items only; no bulk Hunspell inflection expansion is imported.
 5. Level vocabulary accepts 3..9 letter lexical words. This grows the target
    vocabulary without inventing suffix combinations.
-6. 10,000 level wheels use unique letter multisets. Wheel size increases
-   through the campaign: 5 letters early, up to 9 letters late.
+6. `blocked_level_words.txt` contains real but unsuitable mandatory targets
+   (archaic, specialist or overly obscure items). They may remain validation
+   words but are never generated as level targets.
+7. The optimized 10,000-wheel campaign and mandatory target plan are preserved
+   by dictionary refreshes. Intentional campaign rebuilds are handled only by
+   `tool/optimize_campaign.py`, which performs global anti-repetition scoring.
 
 Primary source: Zemberek-NLP master dictionary (Apache-2.0).
 Secondary reviewed source: Turkish Hunspell / dictionary-tr (MIT).
@@ -171,17 +175,68 @@ def build_level_seeds(
     return [word for word, _, _, _ in chosen], richness
 
 
+
+def validate_existing_seeds(seeds: list[str], level_words: set[str]) -> tuple[bool, dict[str, int]]:
+    """Validate an existing 10k wheel map without requiring the seed itself as a target.
+
+    A seed is an internal letter multiset. It may intentionally be absent from
+    level_words when the lexical item is too obscure to show as a mandatory
+    answer. We only require a unique 5..9-letter wheel and enough safe subwords
+    to keep the level playable.
+    """
+    if len(seeds) != 10_000:
+        return False, {}
+    signatures = [signature(word) for word in seeds]
+    if len(set(signatures)) != 10_000 or any(not 5 <= len(word) <= 9 for word in seeds):
+        return False, {}
+
+    by_sig: dict[str, list[str]] = defaultdict(list)
+    for word in level_words:
+        by_sig[signature(word)].append(word)
+
+    richness: dict[str, int] = {}
+    for index, seed in enumerate(seeds, start=1):
+        count = sum(
+            len(by_sig.get(sub_sig, ()))
+            for sub_sig in subword_signatures(signature(seed))
+        )
+        # Runtime already supports fewer than the nominal late-game target
+        # count. Five safe targets is the minimum acceptable playable wheel.
+        if count < 5:
+            return False, {}
+        richness[f'{index}:{seed}'] = count
+    return True, richness
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("zemberek", type=Path)
     parser.add_argument("--project", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--rebuild-seeds",
+        action="store_true",
+        help="Deprecated: campaign remaps now belong to tool/optimize_campaign.py.",
+    )
     args = parser.parse_args()
+    if args.rebuild_seeds:
+        raise SystemExit(
+            "--rebuild-seeds artık bu scriptte kullanılmıyor. "
+            "Önce sözlüğü güncelleyin, sonra tool/optimize_campaign.py ile "
+            "10.000 seviyeyi global olarak yeniden optimize edin."
+        )
 
     project = args.project.resolve()
     dictionary_dir = project / "assets" / "dictionary"
+    # Treat the currently bundled vocabulary as an append-only compatibility
+    # baseline. This prevents a later rebuild with a slightly different source
+    # snapshot from silently deleting words that have already shipped. Explicit
+    # removals must go through blocked_words / blocked_level_words.
+    bundled_validation_baseline = read_plain_words(dictionary_dir / "core_words.txt")
+    bundled_level_baseline = read_plain_words(dictionary_dir / "level_words.txt")
+
     daily = read_plain_words(dictionary_dir / "daily_words.txt")
     curated = read_plain_words(dictionary_dir / "play_words.txt")
     blocked = read_plain_words(dictionary_dir / "blocked_words.txt")
+    blocked_level = read_plain_words(dictionary_dir / "blocked_level_words.txt")
     manual_surface = read_plain_words(dictionary_dir / "manual_surface_words.txt")
     reviewed_expansion = read_plain_words(dictionary_dir / "reviewed_expansion_words.txt")
 
@@ -191,17 +246,48 @@ def main() -> None:
     # No productive tense/possessive expansion. Every addition must come from
     # a lexical source or the explicit reviewed file.
     validation = (
-        lexical | imperative | manual_surface | reviewed_expansion | daily | curated
+        bundled_validation_baseline
+        | lexical
+        | imperative
+        | manual_surface
+        | reviewed_expansion
+        | daily
+        | curated
     ) - blocked
 
     # 3..9 letters makes substantially more real lexical entries playable,
     # instead of padding the lexicon with conjugated forms.
     level_words = {
-        w for w in (lexical | imperative | reviewed_expansion | curated | daily)
-        if 3 <= len(w) <= 9 and w not in blocked
+        w
+        for w in (
+            bundled_level_baseline
+            | lexical
+            | imperative
+            | reviewed_expansion
+            | curated
+            | daily
+        )
+        if 3 <= len(w) <= 9 and w not in blocked and w not in blocked_level
     }
 
-    seeds, richness = build_level_seeds(level_words, curated, daily)
+    seed_path = dictionary_dir / "level_seeds.txt"
+    existing_seeds: list[str] = []
+    if seed_path.exists():
+        existing_seeds = [
+            normalize(raw.split("#", 1)[0])
+            for raw in seed_path.read_text(encoding="utf-8").splitlines()
+            if normalize(raw.split("#", 1)[0])
+        ]
+    preserve_ok, preserved_richness = validate_existing_seeds(existing_seeds, level_words)
+    if not preserve_ok:
+        raise SystemExit(
+            "Mevcut optimize campaign seed haritası yeni sözlükle geçersiz. "
+            "tool/optimize_campaign.py çalıştırılmadan seed haritası otomatik "
+            "olarak yeniden üretilmeyecek."
+        )
+    seeds = existing_seeds
+    richness = preserved_richness
+    seed_mapping_preserved = True
 
     (dictionary_dir / "core_words.txt").write_text(
         "\n".join(sorted(validation)) + "\n", encoding="utf-8"
@@ -237,14 +323,16 @@ def main() -> None:
     signatures = [signature(word) for word in seeds]
     if len(seeds) != 10_000 or len(set(signatures)) != 10_000:
         raise SystemExit("10,000 level seeds are not unique by wheel signature")
-    if min(richness.values()) < 8:
-        raise SystemExit("A level seed has fewer than eight buildable target words")
+    if min(richness.values()) < 5:
+        raise SystemExit("A level wheel has fewer than five safe buildable target words")
 
     seed_lengths = {n: sum(1 for word in seeds if len(word) == n) for n in range(5, 10)}
     report = (
         f"Zemberek lexical headwords:              {len(lexical):,}\n"
         f"Verb imperative/root forms:              {len(imperative):,}\n"
-        f"Reviewed Hunspell additions:             {len(reviewed_expansion):,}\n"
+        f"Reviewed/manual additions:               {len(reviewed_expansion):,}\n"
+        f"Blocked gameplay words:                  {len(blocked):,}\n"
+        f"Blocked mandatory target words:          {len(blocked_level):,}\n"
         f"Manual exceptional surface forms:        {len(manual_surface):,}\n"
         f"Validation lexicon:                       {len(validation):,}\n"
         f"Level target vocabulary (3-9 letters):   {len(level_words):,}\n"
@@ -252,7 +340,8 @@ def main() -> None:
         f"Wheel sizes 5/6/7/8/9:                   "
         f"{seed_lengths[5]:,}/{seed_lengths[6]:,}/{seed_lengths[7]:,}/"
         f"{seed_lengths[8]:,}/{seed_lengths[9]:,}\n"
-        f"Minimum buildable targets per wheel:      {min(richness.values())}\n"
+        f"Minimum safe targets per wheel:           {min(richness.values())}\n"
+        f"Existing optimized seed map preserved:     {'YES' if seed_mapping_preserved else 'NO'}\n"
         "Finite tense/mood generation:             OFF\n"
         "Possessive/case inflection generation:    OFF\n"
         "Gerund/participle generation:             OFF\n"

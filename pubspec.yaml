@@ -34,9 +34,11 @@ flutter:
     - assets/dictionary/play_words.txt
     - assets/dictionary/level_words.txt
     - assets/dictionary/level_seeds.txt
+    - assets/dictionary/level_targets.txt
     - assets/dictionary/manual_surface_words.txt
     - assets/dictionary/reviewed_expansion_words.txt
     - assets/dictionary/blocked_words.txt
+    - assets/dictionary/blocked_level_words.txt
     - assets/audio/
 
 flutter_launcher_icons:

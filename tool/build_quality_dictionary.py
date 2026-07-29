@@ -16,9 +16,9 @@ V6 policy
 6. `blocked_level_words.txt` contains real but unsuitable mandatory targets
    (archaic, specialist or overly obscure items). They may remain validation
    words but are never generated as level targets.
-7. Existing 10,000 wheel seeds are preserved by default so shipped level
-   numbers/save progress do not remap after a dictionary refresh. Use
-   `--rebuild-seeds` only for an intentional campaign remap.
+7. The optimized 10,000-wheel campaign and mandatory target plan are preserved
+   by dictionary refreshes. Intentional campaign rebuilds are handled only by
+   `tool/optimize_campaign.py`, which performs global anti-repetition scoring.
 
 Primary source: Zemberek-NLP master dictionary (Apache-2.0).
 Secondary reviewed source: Turkish Hunspell / dictionary-tr (MIT).
@@ -214,9 +214,15 @@ def main() -> None:
     parser.add_argument(
         "--rebuild-seeds",
         action="store_true",
-        help="Intentionally rebuild/remap the 10,000 campaign wheel seeds.",
+        help="Deprecated: campaign remaps now belong to tool/optimize_campaign.py.",
     )
     args = parser.parse_args()
+    if args.rebuild_seeds:
+        raise SystemExit(
+            "--rebuild-seeds artık bu scriptte kullanılmıyor. "
+            "Önce sözlüğü güncelleyin, sonra tool/optimize_campaign.py ile "
+            "10.000 seviyeyi global olarak yeniden optimize edin."
+        )
 
     project = args.project.resolve()
     dictionary_dir = project / "assets" / "dictionary"
@@ -273,13 +279,15 @@ def main() -> None:
             if normalize(raw.split("#", 1)[0])
         ]
     preserve_ok, preserved_richness = validate_existing_seeds(existing_seeds, level_words)
-    if preserve_ok and not args.rebuild_seeds:
-        seeds = existing_seeds
-        richness = preserved_richness
-        seed_mapping_preserved = True
-    else:
-        seeds, richness = build_level_seeds(level_words, curated, daily)
-        seed_mapping_preserved = False
+    if not preserve_ok:
+        raise SystemExit(
+            "Mevcut optimize campaign seed haritası yeni sözlükle geçersiz. "
+            "tool/optimize_campaign.py çalıştırılmadan seed haritası otomatik "
+            "olarak yeniden üretilmeyecek."
+        )
+    seeds = existing_seeds
+    richness = preserved_richness
+    seed_mapping_preserved = True
 
     (dictionary_dir / "core_words.txt").write_text(
         "\n".join(sorted(validation)) + "\n", encoding="utf-8"
@@ -333,7 +341,7 @@ def main() -> None:
         f"{seed_lengths[5]:,}/{seed_lengths[6]:,}/{seed_lengths[7]:,}/"
         f"{seed_lengths[8]:,}/{seed_lengths[9]:,}\n"
         f"Minimum safe targets per wheel:           {min(richness.values())}\n"
-        f"Existing seed mapping preserved:          {'YES' if seed_mapping_preserved else 'NO'}\n"
+        f"Existing optimized seed map preserved:     {'YES' if seed_mapping_preserved else 'NO'}\n"
         "Finite tense/mood generation:             OFF\n"
         "Possessive/case inflection generation:    OFF\n"
         "Gerund/participle generation:             OFF\n"

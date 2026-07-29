@@ -299,14 +299,15 @@ class GameController extends ChangeNotifier {
   }
 
   Future<void> _migrateContentState() async {
-    const contentVersion = 6;
+    const contentVersion = 7;
     final storedVersion = await storage.getInt('content_version', 0);
     if (storedVersion >= contentVersion) return;
 
-    // V6 dictionary-quality patch changes the deterministic target pool while
-    // preserving the 10,000 wheel/level mapping. Keep the player's economy and
-    // reached level, but restart only the currently-open board so persisted
-    // found-word/hint state cannot leak into the refreshed target list.
+    // V7 globally re-optimizes the 10,000-level campaign: target lists are
+    // frequency/curation ranked and wheel-size boundaries are aligned with
+    // target-count difficulty. Keep economy and reached level, but restart
+    // only the currently-open board so old found-word/hint state cannot leak
+    // into the remapped campaign.
     await storage.setInt('active_level_number', -1);
     await storage.setStringList('found_words', const <String>[]);
     await storage.setStringList('bonus_words', const <String>[]);

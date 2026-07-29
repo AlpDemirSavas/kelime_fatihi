@@ -1,0 +1,14 @@
+FrequencyWords Turkish frequency ranking notice
+================================================
+
+Source project: https://github.com/hermitdave/FrequencyWords
+Turkish file: content/2016/tr/tr_50k.txt
+Upstream corpus basis: OpenSubtitles
+
+Upstream README states:
+- Code: MIT License
+- Generated frequency-list content: CC BY-SA 4.0
+
+Kelime Fatihi uses the Turkish list only at build time to rank already-approved
+lexical candidates for mandatory level targets. The raw frequency list is not
+bundled as a runtime application asset.

@@ -1,28 +1,41 @@
-# Sözlük kalite yaması doğrulaması — 2026-07-29
+# V7 Validation
 
-Statik/asset kontrolleri:
+## Sözlük
 
-- Runtime validation lexicon: 27.854 kelime
-- Mandatory level target vocabulary: 23.538 kelime
-- Reviewed expansion: 1.095 kelime
-- Global gameplay denylist: 212 kelime
-- Mandatory-target denylist: 400 kelime
-- Unique level wheels: 10.000
-- `level_seeds.txt` sırası korunmuştur.
-- Yeni 853 onaylı kelime doğrulama katmanına eklenmiştir.
-- Bunların 679 adet 5–9 harfli kısmı zorunlu hedef havuzuna uygundur.
-- Global denylist ile `core_words.txt` / `level_words.txt` arasında kesişim yoktur.
-- Mandatory-target denylist ile `level_words.txt` arasında kesişim yoktur.
-- Runtime katmanı reviewed/manual listeleri doğrudan birleştirir ve denylist'leri son kez uygular.
-- Çekimli zaman/kip, otomatik iyelik/hal ve fiilimsi üretimi kapalı kalmıştır.
-- `content_version = 6`; yalnızca güncelleme sırasında açık olan bölümün geçici hedef/bonus/ipucu durumu sıfırlanır.
+- `core_words.txt`: 27.854 doğrulama/bonus kelimesi.
+- `level_words.txt`: 23.538 adet 3–9 harfli seviye kelimesi.
+- `reviewed_expansion_words.txt`: 1.095 insan-kürasyonlu genişletme.
+- `blocked_words.txt`: 212 kesin reddedilen kelime.
+- `blocked_level_words.txt`: 400 zorunlu hedefe çıkamayan nadir/eski kelime.
 
-Gerçek Flutter SDK doğrulaması kullanıcı makinesinde yapılmalıdır:
+## 10.000 bölüm
+
+- `level_seeds.txt`: tam 10.000 satır ve 10.000 benzersiz harf imzası.
+- `level_targets.txt`: tam 10.000 satır.
+- Bütün target satırları seed harflerinden kurulabilir.
+- Bütün target kelimeleri runtime `level_words` havuzunda bulunur.
+- Bölüm hedef sayıları 5/6/7/8/9/10 eğrisine eksiksiz uyar.
+- Wheel uzunlukları 5/6/7/8/9 olarak aynı difficulty sınırlarında artar.
+- Nadir target denylist'i 10.000 bölümün hiçbirinde sızmaz.
+
+## Kalite guard'ları
+
+- Aynı wheel signature iki farklı bölümde kullanılmaz.
+- En çok tekrar eden zorunlu kelime: 97 (test limiti <=120).
+- 3 harfli zorunlu hedef: 12.935 (test limiti <15.000).
+- Ardışık iki bölüm en fazla 2 ortak zorunlu hedef taşır.
+- Curated hedef içeren bölüm: 9.446 / 10.000.
+- Build-time frekans/kürasyon filtresi dışındaki kelime zorunlu hedefe alınmaz.
+
+## Migration
+
+`content_version = 7`. Kampanya sırası bilinçli yeniden optimize edildiği için yalnızca açık board'un `found_words`, `bonus_words` ve hint state'i temizlenir. Ulaşılan level ve ekonomi korunur.
+
+## Çalıştırılacak kontroller
 
 ```text
 flutter clean
 flutter pub get
 flutter analyze
 flutter test
-flutter run
 ```

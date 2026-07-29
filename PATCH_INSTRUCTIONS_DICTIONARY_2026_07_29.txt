@@ -1,14 +1,16 @@
-KELIME FATİHİ - SÖZLÜK KALİTE PATCHİ (2026-07-29)
+KELIME FATİHİ - SÖZLÜK + V7 CAMPAIGN QUALITY PATCHİ
+
+Bu talimat V6'nın eski "seed mapping korunur" notunun yerini alır.
 
 ÖNERİLEN YOL - GIT APPLY:
-1) Proje kökünde yedek/branch oluştur:
-   git checkout -b dictionary-quality-patch
+1) Proje kökünde branch oluştur:
+   git checkout -b dictionary-campaign-v7
 
-2) Verilen kelime_fatihi_dictionary_integration.patch dosyasını proje köküne koy.
+2) Verilen tam V7 patch dosyasını proje köküne koy.
 
 3) Uygula:
-   git apply --check kelime_fatihi_dictionary_integration.patch
-   git apply kelime_fatihi_dictionary_integration.patch
+   git apply --check kelime_fatihi_v7_complete.patch
+   git apply kelime_fatihi_v7_complete.patch
 
 4) Kontrol:
    flutter clean
@@ -19,13 +21,9 @@ KELIME FATİHİ - SÖZLÜK KALİTE PATCHİ (2026-07-29)
 
 5) Git diff'i incele ve commit et.
 
-ALTERNATİF - DOSYA ÜZERİNE KOPYALAMA:
-`kelime_fatihi_dictionary_patch_files.zip` içeriğini proje kökünün üzerine çıkar ve Replace seç.
-Zip yalnızca değişen/yeni dosyaları içerir.
-
 ÖNEMLİ:
-- level_seeds.txt bilinçli olarak değiştirilmedi. 10.000 bölümün mevcut harf çemberi eşlemesi korunur.
-- Nadir/eski seed sözcükleri artık zorunlu cevap havuzundan çıkarılmıştır; seed yalnızca iç harf çemberi anahtarı olabilir.
-- content_version 5 -> 6 yükselir. Güncellemeden sonra yalnızca açık bölümün geçici ilerlemesi sıfırlanır; ulaşılan bölüm/altın/can/istatistik korunur.
-- Normal kelime ekleme için reviewed_expansion_words.txt güncellenebilir. Runtime bunu doğrudan yükler.
-- Kampanya haritasını özellikle değiştirmek istemiyorsan build scriptini `--rebuild-seeds` ile çalıştırma.
+- V7, 10.000 seviyeyi global olarak yeniden optimize eder; eski level→wheel mapping korunmaz.
+- content_version 7 olur. Sadece açık board'un geçici cevap/ipucu state'i sıfırlanır.
+- Ulaşılan bölüm, altın, can ve genel istatistikler korunur.
+- Zorunlu target seçimi artık runtime random değil, assets/dictionary/level_targets.txt planıdır.
+- Kampanya yeniden üretimi için tool/optimize_campaign.py kullanılır.

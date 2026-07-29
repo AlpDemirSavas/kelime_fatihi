@@ -1,0 +1,20 @@
+Kelime Fatihi V7 campaign patch
+================================
+
+Patch uygulandıktan sonra proje kökünde:
+
+  flutter clean
+  flutter pub get
+  flutter analyze
+  flutter test
+  flutter run
+
+Normal kelime güncellemesi:
+
+  python tool/build_quality_dictionary.py <zemberek-master-dictionary-path>
+
+10.000 seviyeyi yeniden optimize etmek istersen:
+
+  python tool/optimize_campaign.py <tr_50k.txt>
+
+Frekans listesi kaynak/provenansı THIRD_PARTY_NOTICES.md içinde açıklanmıştır.

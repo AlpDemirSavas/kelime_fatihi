@@ -27,3 +27,16 @@ Lisans metni: `licenses/HUNSPELL_TR_MIT.txt`.
 ## Kaikki / Wiktionary
 
 Kaikki/Wiktionary verisi V6 binary'sine gömülmemiştir. Bu kaynak araştırmada daha geniş aday havuzu olarak incelenmiştir; CC-BY-SA/GFDL yükümlülükleri nedeniyle doğrudan V6 sözlüğüne alınmamıştır.
+
+## FrequencyWords Turkish frequency data — V7 campaign ranking
+
+V7'nin 10.000 seviyelik zorunlu hedef planı oluşturulurken Türkçe kelimelerin kullanım yaygınlığını ölçmek için HermitDave/FrequencyWords projesinin `content/2016/tr/tr_50k.txt` verisi **yalnızca build-time sıralama sinyali** olarak kullanılmıştır. Ham frekans listesi uygulama asset'lerine gömülmez.
+
+- Project: `hermitdave/FrequencyWords`
+- Repository: https://github.com/hermitdave/FrequencyWords
+- Turkish source: `content/2016/tr/tr_50k.txt`
+- Corpus basis: OpenSubtitles frequency data
+- Repository code license: MIT
+- Generated frequency-list content license stated by upstream: CC BY-SA 4.0
+
+Bu kaynak yalnızca hangi güvenli sözlük başlıklarının zorunlu seviyelerde daha uygun olduğunu sıralamak için kullanılır; Kelime Fatihi'nin lexical doğrulama kaynağının yerine geçmez.

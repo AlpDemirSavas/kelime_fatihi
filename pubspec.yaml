@@ -37,6 +37,7 @@ flutter:
     - assets/dictionary/manual_surface_words.txt
     - assets/dictionary/reviewed_expansion_words.txt
     - assets/dictionary/blocked_words.txt
+    - assets/dictionary/blocked_level_words.txt
     - assets/audio/
 
 flutter_launcher_icons:

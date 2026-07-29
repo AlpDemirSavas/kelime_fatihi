@@ -1,13 +1,15 @@
-Zemberek lexical headwords:              23,309
-Verb imperative/root forms:              3,168
-Reviewed Hunspell additions:             242
-Manual exceptional surface forms:        0
-Validation lexicon:                       26,453
-Level target vocabulary (3-9 letters):   23,376
-Unique prevalidated level wheels:         10,000
-Wheel sizes 5/6/7/8/9:                   1,000/2,000/2,500/2,700/1,800
-Minimum buildable targets per wheel:      8
-Finite tense/mood generation:             OFF
-Possessive/case inflection generation:    OFF
-Gerund/participle generation:             OFF
-Quality regression checks:                OK
+Current bundled validation lexicon:             27,854
+Current mandatory level vocabulary (3-9):       23,538
+Reviewed/manual expansion words:                 1,095
+Blocked gameplay words:                            212
+Blocked mandatory target words:                    400
+Daily answer words:                                 223
+Unique preserved level wheels:                   10,000
+Wheel mapping changed by this patch:                 NO
+Runtime reviewed-expansion merge:                  ON
+Runtime global denylist enforcement:               ON
+Runtime mandatory-target denylist enforcement:     ON
+Finite tense/mood generation:                     OFF
+Possessive/case inflection generation:            OFF
+Gerund/participle generation:                     OFF
+Open-level migration content_version:                6

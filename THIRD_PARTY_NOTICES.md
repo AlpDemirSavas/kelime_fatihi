@@ -15,7 +15,7 @@ Lisans metinleri: `licenses/APACHE-2.0.txt` ve `licenses/ZEMBEREK_LICENSE.txt`.
 
 ## Turkish Hunspell reviewed additions
 
-V6'da 242 ek kelime, Türkçe Hunspell yazım sözlüğünden aday olarak alınmış ve oyun için elle gözden geçirilmiştir. Hunspell'in toplu çekim çıktısı oyuna aktarılmamıştır.
+İlk V6 genişletmesinde 242 ek kelime, Türkçe Hunspell yazım sözlüğünden aday olarak alınmış ve oyun için elle gözden geçirilmiştir. Hunspell'in toplu çekim çıktısı oyuna aktarılmamıştır. Daha sonraki proje-içi manuel kürasyon kelimeleri aynı `reviewed_expansion_words.txt` dosyasında tutulur; bu yeni manuel girdiler Hunspell kaynağına atfedilmez.
 
 - Package/source mirror: `dictionary-tr` in `wooorm/dictionaries`
 - Source described by upstream as Turkish spelling dictionary

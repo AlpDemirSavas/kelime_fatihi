@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kelime_fatihi/services/dictionary_service.dart';
 
@@ -70,6 +71,78 @@ void main() {
       'abrakadabralamak',
     ]) {
       expect(dictionary.contains(word), isFalse, reason: '$word oyun sözlüğünde olmamalı');
+    }
+  });
+
+
+  test('yeni kürasyonlu kelimeler runtime sözlüğüne doğrudan dahil edilir', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    for (final word in <String>[
+      'internet',
+      'siber',
+      'vizyoner',
+      'yazılımcı',
+      'girişimci',
+      'tasarımcı',
+      'üretici',
+      'kullanıcı',
+      'etkinlik',
+      'liderlik',
+      'dürüstlük',
+      'toplumsal',
+      'fiziksel',
+      'bilinçli',
+      'mantıklı',
+      'sağlıklı',
+      'gerçekçi',
+      'riskli',
+      'sürdürülebilirlik',
+    ]) {
+      expect(dictionary.contains(word), isTrue, reason: '$word sözlükte olmalı');
+    }
+  });
+
+  test('global denylist runtime katmanında da kesin uygulanır', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    for (final word in <String>[
+      'ram',
+      'ruam',
+      'astik',
+      'arkıt',
+      'hilat',
+      'rasıt',
+      'abdiaciz',
+      'adacyo',
+      'accelerando',
+      'aktinyum',
+      'blastula',
+      'single',
+    ]) {
+      expect(dictionary.contains(word), isFalse, reason: '$word kesin reddedilmeli');
+    }
+  });
+
+  test('nadir kelimeler 10.000 bölümün hiçbirinde zorunlu hedef olmaz', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    final raw = await rootBundle.loadString(
+      'assets/dictionary/blocked_level_words.txt',
+    );
+    final blockedTargets = raw
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.split('#').first.trim())
+        .where((line) => line.isNotEmpty)
+        .toSet();
+
+    for (var levelNo = 1; levelNo <= DictionaryService.maxLevel; levelNo++) {
+      final level = dictionary.buildLevel(levelNo);
+      final leaked = level.words.where(blockedTargets.contains).toList();
+      expect(leaked, isEmpty, reason: 'Bölüm $levelNo nadir hedef içeriyor: $leaked');
     }
   });
 

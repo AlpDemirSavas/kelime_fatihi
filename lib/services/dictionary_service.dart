@@ -49,29 +49,49 @@ class DictionaryService {
       rootBundle.loadString('assets/dictionary/play_words.txt'),
       rootBundle.loadString('assets/dictionary/level_words.txt'),
       rootBundle.loadString('assets/dictionary/level_seeds.txt'),
+      rootBundle.loadString('assets/dictionary/manual_surface_words.txt'),
+      rootBundle.loadString('assets/dictionary/reviewed_expansion_words.txt'),
+      rootBundle.loadString('assets/dictionary/blocked_words.txt'),
+      rootBundle.loadString('assets/dictionary/blocked_level_words.txt'),
     ]);
     final parsed = await compute(_parseDictionaryPayload, rawAssets);
 
-    _words
-      ..clear()
-      ..addAll(parsed[0]);
+    final blockedWords = parsed[7].toSet();
+    final blockedLevelWords = parsed[8].toSet();
+
     _dailyWords
       ..clear()
-      ..addAll(parsed[1].where((w) => w.length == 5));
+      ..addAll(
+        parsed[1].where(
+          (word) => word.length == 5 && !blockedWords.contains(word),
+        ),
+      );
 
     _levelWords
       ..clear()
       ..addAll(parsed[3])
-      ..addAll(parsed[2].where((w) => w.length >= 3 && w.length <= 9))
-      ..addAll(_dailyWords.where((w) => w.length >= 3 && w.length <= 9));
+      ..addAll(parsed[2].where((word) => word.length >= 3 && word.length <= 9))
+      ..addAll(parsed[6].where((word) => word.length >= 3 && word.length <= 9))
+      ..addAll(_dailyWords.where((word) => word.length >= 3 && word.length <= 9))
+      ..removeAll(blockedWords)
+      ..removeAll(blockedLevelWords);
 
     _words
+      ..clear()
+      ..addAll(parsed[0])
+      ..addAll(parsed[5])
+      ..addAll(parsed[6])
       ..addAll(_dailyWords)
-      ..addAll(_levelWords);
+      ..addAll(_levelWords)
+      ..removeAll(blockedWords);
 
     _seedWords
       ..clear()
-      ..addAll(parsed[4].where((w) => w.length >= 5 && w.length <= 9));
+      ..addAll(
+        parsed[4].where(
+          (word) => word.length >= 5 && word.length <= 9,
+        ),
+      );
 
     _levelWordsBySignature.clear();
     for (final word in _levelWords) {
@@ -133,9 +153,16 @@ class DictionaryService {
     final sameSignature = words
         .where((word) => _signature(word) == _signature(seed))
         .toList();
+    // A wheel seed is an internal letter source, not necessarily a mandatory
+    // answer. Rare/archaic words may stay in level_seeds.txt to preserve the
+    // existing 10,000-level mapping while being excluded from _levelWords.
+    // If the seed itself is not an allowed target, prefer a safe anagram; if
+    // there is none, use the strongest available safe subword instead.
     final mainWord = sameSignature.contains(seed)
         ? seed
-        : (sameSignature.isNotEmpty ? sameSignature.first : seed);
+        : (sameSignature.isNotEmpty
+              ? sameSignature.first
+              : (words.isNotEmpty ? words.first : seed));
     final others = words.where((word) => word != mainWord).toList()
       ..shuffle(seeded);
     final selected = <String>[

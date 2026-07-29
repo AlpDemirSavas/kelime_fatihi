@@ -1,0 +1,31 @@
+KELIME FATİHİ - SÖZLÜK KALİTE PATCHİ (2026-07-29)
+
+ÖNERİLEN YOL - GIT APPLY:
+1) Proje kökünde yedek/branch oluştur:
+   git checkout -b dictionary-quality-patch
+
+2) Verilen kelime_fatihi_dictionary_integration.patch dosyasını proje köküne koy.
+
+3) Uygula:
+   git apply --check kelime_fatihi_dictionary_integration.patch
+   git apply kelime_fatihi_dictionary_integration.patch
+
+4) Kontrol:
+   flutter clean
+   flutter pub get
+   flutter analyze
+   flutter test
+   flutter run
+
+5) Git diff'i incele ve commit et.
+
+ALTERNATİF - DOSYA ÜZERİNE KOPYALAMA:
+`kelime_fatihi_dictionary_patch_files.zip` içeriğini proje kökünün üzerine çıkar ve Replace seç.
+Zip yalnızca değişen/yeni dosyaları içerir.
+
+ÖNEMLİ:
+- level_seeds.txt bilinçli olarak değiştirilmedi. 10.000 bölümün mevcut harf çemberi eşlemesi korunur.
+- Nadir/eski seed sözcükleri artık zorunlu cevap havuzundan çıkarılmıştır; seed yalnızca iç harf çemberi anahtarı olabilir.
+- content_version 5 -> 6 yükselir. Güncellemeden sonra yalnızca açık bölümün geçici ilerlemesi sıfırlanır; ulaşılan bölüm/altın/can/istatistik korunur.
+- Normal kelime ekleme için reviewed_expansion_words.txt güncellenebilir. Runtime bunu doğrudan yükler.
+- Kampanya haritasını özellikle değiştirmek istemiyorsan build scriptini `--rebuild-seeds` ile çalıştırma.

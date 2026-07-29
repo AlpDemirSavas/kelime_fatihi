@@ -1,18 +1,28 @@
-# V6 Validation
+# Sözlük kalite yaması doğrulaması — 2026-07-29
 
-Build-time sözlük kontrolleri:
+Statik/asset kontrolleri:
 
-- Validation lexicon: 26.453
-- Level target vocabulary: 23.376
+- Runtime validation lexicon: 27.854 kelime
+- Mandatory level target vocabulary: 23.538 kelime
+- Reviewed expansion: 1.095 kelime
+- Global gameplay denylist: 212 kelime
+- Mandatory-target denylist: 400 kelime
 - Unique level wheels: 10.000
-- Wheel sizes: 5/6/7/8/9 = 1000/2000/2500/2700/1800
-- Minimum buildable target count per wheel: 8
-- Finite tense/mood generation: OFF
-- Possessive/case generation: OFF
-- Gerund/participle generation: OFF
+- `level_seeds.txt` sırası korunmuştur.
+- Yeni 853 onaylı kelime doğrulama katmanına eklenmiştir.
+- Bunların 679 adet 5–9 harfli kısmı zorunlu hedef havuzuna uygundur.
+- Global denylist ile `core_words.txt` / `level_words.txt` arasında kesişim yoktur.
+- Mandatory-target denylist ile `level_words.txt` arasında kesişim yoktur.
+- Runtime katmanı reviewed/manual listeleri doğrudan birleştirir ve denylist'leri son kez uygular.
+- Çekimli zaman/kip, otomatik iyelik/hal ve fiilimsi üretimi kapalı kalmıştır.
+- `content_version = 6`; yalnızca güncelleme sırasında açık olan bölümün geçici hedef/bonus/ipucu durumu sıfırlanır.
 
-Özel red regresyonları arasında `atar`, `tarar`, `boşuyor`, `tarıyor`, `atıyor`, `geldi`, `geliyor`, `gelmiş`, `gitti`, `gidiyor`, `gidecek`, `yaptı`, `yapıyor`, `yapacak` bulunur.
+Gerçek Flutter SDK doğrulaması kullanıcı makinesinde yapılmalıdır:
 
-Özel kabul regresyonları arasında `tara`, `boşal`, `armut`, `deste`, `karınca`, `oyuncu`, `sanatçı`, `yayıncı`, `kitapçı`, `şarkıcı` bulunur.
-
-Bu çalışma ortamında Flutter SDK yoksa nihai cihaz derlemesi kullanıcı makinesinde `flutter analyze`, `flutter test`, `flutter run` ile yapılmalıdır.
+```text
+flutter clean
+flutter pub get
+flutter analyze
+flutter test
+flutter run
+```

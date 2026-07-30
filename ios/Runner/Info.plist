@@ -7,11 +7,14 @@
     <true/>
 
     <key>CFBundleDevelopmentRegion</key>
-    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <string>tr</string>
 
     <key>CFBundleDisplayName</key>
     <string>Kelime Fatihi</string>
-
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>tr</string>
+    </array>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
 

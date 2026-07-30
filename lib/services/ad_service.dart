@@ -17,10 +17,20 @@ class AdService {
   Future<void>? _rewardedLoadFuture;
 
   bool privacyOptionsRequired = false;
+  bool bannerDismissedForSession = false;
 
   // iOS ATT sonucu.
   // Kullanıcı tracking izni vermezse reklamları non-personalized istiyoruz.
   bool _trackingAuthorized = false;
+
+  static const String _androidBannerLive = String.fromEnvironment(
+    'ADMOB_ANDROID_BANNER',
+  );
+
+  static const String _iosBannerLive = String.fromEnvironment(
+    'ADMOB_IOS_BANNER',
+    defaultValue: 'ca-app-pub-7947363274814419/3373485363',
+  );
 
   static const String _androidInterstitialLive = String.fromEnvironment(
     'ADMOB_ANDROID_INTERSTITIAL',
@@ -37,6 +47,16 @@ class AdService {
   static const String _iosRewardedLive = String.fromEnvironment(
     'ADMOB_IOS_REWARDED',
   );
+
+  static String get _bannerId {
+    if (!kReleaseMode) {
+      return Platform.isAndroid
+          ? 'ca-app-pub-3940256099942544/6300978111'
+          : 'ca-app-pub-3940256099942544/2934735716';
+    }
+
+    return Platform.isAndroid ? _androidBannerLive : _iosBannerLive;
+  }
 
   static String get _interstitialId {
     if (!kReleaseMode) {
@@ -186,6 +206,43 @@ class AdService {
 
   void showPrivacyOptions() {
     ConsentForm.showPrivacyOptionsForm((_) {});
+  }
+
+  /// Alt banner reklamını güvenli biçimde hazırlar. İnternet/consent/reklam
+  /// birimi yoksa null döner; oyun akışı hiçbir zaman bloke edilmez.
+  Future<BannerAd?> loadBanner() async {
+    if (bannerDismissedForSession) return null;
+
+    await initialize();
+
+    if (!_initialized || _bannerId.isEmpty || bannerDismissedForSession) {
+      return null;
+    }
+
+    final completer = Completer<BannerAd?>();
+    late final BannerAd banner;
+
+    banner = BannerAd(
+      adUnitId: _bannerId,
+      size: AdSize.banner,
+      request: _adRequest,
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          if (!completer.isCompleted) completer.complete(banner);
+        },
+        onAdFailedToLoad: (ad, _) {
+          ad.dispose();
+          if (!completer.isCompleted) completer.complete(null);
+        },
+      ),
+    );
+
+    banner.load();
+    return completer.future;
+  }
+
+  void dismissBannerForSession() {
+    bannerDismissedForSession = true;
   }
 
   void loadInterstitial() {

@@ -507,6 +507,13 @@ class GameController extends ChangeNotifier {
       return ConquestResult.invalid('En az 3 harf seçmelisin.');
     }
 
+    // Can sıfırken doğru veya bonus kelime girerek bölüme devam edilmesine
+    // izin verme. Can kontrolü hedef/bonus doğrulamasından önce yapılmalı.
+    if (hearts <= 0) {
+      comboCount = 0;
+      return ConquestResult.noHeart();
+    }
+
     if (foundWords.contains(word) || bonusWords.contains(word)) {
       return ConquestResult.duplicate(word);
     }
@@ -547,7 +554,6 @@ class GameController extends ChangeNotifier {
     }
 
     comboCount = 0;
-    if (hearts <= 0) return ConquestResult.noHeart();
     final wasFull = hearts >= maxNaturalHearts;
     hearts--;
     if (wasFull && hearts < maxNaturalHearts) {

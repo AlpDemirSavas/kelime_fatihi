@@ -203,15 +203,25 @@ class _LetterWheelState extends State<LetterWheel> {
     _pointer = point;
 
     for (var i = 0; i < _centers.length; i++) {
-      if ((point - _centers[i]).distance <= _hitRadius &&
-          !_selected.contains(i)) {
-        _selected.add(i);
+      if ((point - _centers[i]).distance > _hitRadius) continue;
 
+      // Parmağı çizilen yol üzerinde bir önceki harfe geri götürmek,
+      // son seçimi geri alır. Böylece kullanıcı yanlış harfe değdiğinde
+      // parmağını kaldırıp hatalı kelime göndermek zorunda kalmaz.
+      if (_selected.length >= 2 && i == _selected[_selected.length - 2]) {
+        _selected.removeLast();
         HapticFeedback.selectionClick();
         widget.onLetterSelected?.call();
-
         break;
       }
+
+      if (!_selected.contains(i)) {
+        _selected.add(i);
+        HapticFeedback.selectionClick();
+        widget.onLetterSelected?.call();
+      }
+
+      break;
     }
 
     setState(() {});

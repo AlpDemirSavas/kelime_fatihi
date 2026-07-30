@@ -11,6 +11,7 @@ import '../models/conquest_region.dart';
 import '../services/audio_service.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/celebration_overlay.dart';
+import '../widgets/dismissible_banner_ad.dart';
 import '../widgets/game_scope.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/letter_wheel.dart';
@@ -116,6 +117,10 @@ class _ConquestScreenState extends State<ConquestScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: DismissibleBannerAd(
+        ads: game.ads,
+        isAdFree: game.isAdFree,
+      ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text('${region.emoji} Bölüm ${level.number}'),
@@ -386,7 +391,9 @@ class _ConquestScreenState extends State<ConquestScreen> {
       celebrate = result.completed;
     });
 
-    if (result.noHearts) {
+    // Son yanlış deneme mevcut son canı da tükettiyse kullanıcıyı bir
+    // sonraki kelimeyi denemeye zorlamadan can kazanma ekranını aç.
+    if (result.noHearts || (result.lostHeart && game.hearts <= 0)) {
       await _showNoHeartDialog(game);
       return;
     }

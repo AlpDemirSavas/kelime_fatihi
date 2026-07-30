@@ -7,6 +7,7 @@ import '../core/turkish_text.dart';
 import '../models/word_feedback.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/celebration_overlay.dart';
+import '../widgets/dismissible_banner_ad.dart';
 import '../widgets/game_scope.dart';
 import '../widgets/glass_card.dart';
 
@@ -21,10 +22,12 @@ class _DailyScreenState extends State<DailyScreen> {
   String current = '';
   bool celebrate = false;
 
+  // Standart Türkçe Q dizilimi. q/w/x günlük cevaplarda nadiren kullanılsa
+  // bile klavye düzeni iOS Türkçe Q ile aynı yerde kalır.
   static const rows = [
-    ['e', 'r', 't', 'y', 'u', 'ı', 'i', 'o', 'p', 'ğ', 'ü'],
-    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ş'],
-    ['z', 'c', 'v', 'b', 'n', 'm', 'ö', 'ç'],
+    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'ı', 'o', 'p', 'ğ', 'ü'],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ş', 'i'],
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'ö', 'ç'],
   ];
 
   @override
@@ -33,6 +36,10 @@ class _DailyScreenState extends State<DailyScreen> {
     final guesses = game.dailyGuesses;
 
     return Scaffold(
+      bottomNavigationBar: DismissibleBannerAd(
+        ads: game.ads,
+        isAdFree: game.isAdFree,
+      ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text('Günün Kelimesi'),
@@ -146,6 +153,8 @@ class _DailyScreenState extends State<DailyScreen> {
   }
 
   Widget _keyboard(GameController game) {
+    final keyStates = _dailyKeyboardStates(game);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Column(
@@ -155,19 +164,22 @@ class _DailyScreenState extends State<DailyScreen> {
               fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: row
-                    .map(
-                      (letter) => _Key(
-                        label: TurkishText.upper(letter),
-                        onTap: () {
-                          if (current.length >= 5) return;
-                          setState(() => current += letter);
-                          HapticFeedback.selectionClick();
-                          game.audio.select();
-                        },
-                      ),
-                    )
-                    .toList(),
+                children: row.map((letter) {
+                  final state = keyStates[letter];
+                  final disabled = state == LetterState.absent;
+
+                  return _Key(
+                    label: TurkishText.upper(letter),
+                    state: state,
+                    enabled: !disabled,
+                    onTap: () {
+                      if (current.length >= 5) return;
+                      setState(() => current += letter);
+                      HapticFeedback.selectionClick();
+                      game.audio.select();
+                    },
+                  );
+                }).toList(),
               ),
             ),
           Row(
@@ -198,6 +210,29 @@ class _DailyScreenState extends State<DailyScreen> {
       ),
     );
   }
+
+  Map<String, LetterState> _dailyKeyboardStates(GameController game) {
+    final states = <String, LetterState>{};
+
+    for (final guess in game.dailyGuesses) {
+      for (final feedback in game.evaluateDaily(guess)) {
+        final oldState = states[feedback.letter];
+        if (oldState == null ||
+            _keyboardStateRank(feedback.state) >
+                _keyboardStateRank(oldState)) {
+          states[feedback.letter] = feedback.state;
+        }
+      }
+    }
+
+    return states;
+  }
+
+  int _keyboardStateRank(LetterState state) => switch (state) {
+    LetterState.absent => 0,
+    LetterState.present => 1,
+    LetterState.correct => 2,
+  };
 
   Future<void> _submit(GameController game) async {
     final error = await game.submitDaily(current);
@@ -266,19 +301,39 @@ class _DailyTile extends StatelessWidget {
 }
 
 class _Key extends StatelessWidget {
-  const _Key({required this.label, required this.onTap});
+  const _Key({
+    required this.label,
+    required this.onTap,
+    required this.enabled,
+    this.state,
+  });
+
   final String label;
   final VoidCallback onTap;
+  final bool enabled;
+  final LetterState? state;
 
   @override
   Widget build(BuildContext context) {
+    final background = switch (state) {
+      LetterState.correct => GameTheme.mint,
+      LetterState.present => GameTheme.gold,
+      LetterState.absent => const Color(0xFF202A35),
+      null => Colors.white.withValues(alpha: .1),
+    };
+    final foreground = switch (state) {
+      LetterState.correct || LetterState.present => const Color(0xFF07111F),
+      LetterState.absent => Colors.white.withValues(alpha: .28),
+      null => Colors.white,
+    };
+
     return Padding(
       padding: const EdgeInsets.all(2),
       child: Material(
-        color: Colors.white.withValues(alpha: .1),
+        color: background,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
             width: 30,
@@ -286,7 +341,8 @@ class _Key extends StatelessWidget {
             child: Center(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: foreground,
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
                 ),

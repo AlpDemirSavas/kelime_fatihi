@@ -43,7 +43,11 @@ class GameController extends ChangeNotifier {
   int dailyWins = 0;
   int dailyStreak = 0;
   int bestDailyStreak = 0;
+  int dailyPuzzleStreak = 0;
+  int bestDailyPuzzleStreak = 0;
   String streakRewardMessage = '';
+  String lastRejectedWord = '';
+  LevelMilestoneReward? _pendingMilestoneReward;
   int lastHeartSyncMs = 0;
   int comboCount = 0;
   int bestCombo = 0;
@@ -94,6 +98,11 @@ class GameController extends ChangeNotifier {
     totalWordsFound = await storage.getInt('total_words_found', 0);
     dailyWins = await storage.getInt('daily_wins', 0);
     dailyStreak = await storage.getInt('login_streak', 0);
+    dailyPuzzleStreak = await storage.getInt('daily_puzzle_streak', 0);
+    bestDailyPuzzleStreak = await storage.getInt(
+      'best_daily_puzzle_streak',
+      0,
+    );
     bestDailyStreak = await storage.getInt('best_login_streak', 0);
     bestCombo = await storage.getInt('best_combo', 0);
     freeHints = await storage.getInt('free_hints', 0);
@@ -169,6 +178,9 @@ class GameController extends ChangeNotifier {
       dailyGuesses = await storage.getStringList('daily_guesses');
       dailyFinished = await storage.getBool('daily_finished', false);
       dailyWon = await storage.getBool('daily_won', false);
+      if (dailyFinished) {
+        await _syncDailyPuzzleStreakForCompletedDay();
+      }
     } else {
       dailyGuesses = <String>[];
       dailyFinished = false;
@@ -178,6 +190,37 @@ class GameController extends ChangeNotifier {
       await storage.setBool('daily_finished', false);
       await storage.setBool('daily_won', false);
     }
+  }
+
+  Future<void> _syncDailyPuzzleStreakForCompletedDay() async {
+    final lastProcessedDate = await storage.getString(
+      'last_daily_result_date',
+    );
+    if (lastProcessedDate == dailyDateKey) return;
+
+    if (dailyWon) {
+      final yesterday = _dateKey(
+        DateTime.now().subtract(const Duration(days: 1)),
+      );
+      final lastWinDate = await storage.getString('last_daily_win_date');
+      dailyPuzzleStreak = lastWinDate == yesterday
+          ? dailyPuzzleStreak + 1
+          : 1;
+      bestDailyPuzzleStreak = max(
+        bestDailyPuzzleStreak,
+        dailyPuzzleStreak,
+      );
+      await storage.setString('last_daily_win_date', dailyDateKey);
+    } else {
+      dailyPuzzleStreak = 0;
+    }
+
+    await storage.setString('last_daily_result_date', dailyDateKey);
+    await storage.setInt('daily_puzzle_streak', dailyPuzzleStreak);
+    await storage.setInt(
+      'best_daily_puzzle_streak',
+      bestDailyPuzzleStreak,
+    );
   }
 
   Future<void> _loadMissions() async {
@@ -462,6 +505,7 @@ class GameController extends ChangeNotifier {
       }
       await storage.setInt('daily_wins', dailyWins);
       await storage.setInt('coins', coins);
+      await _syncDailyPuzzleStreakForCompletedDay();
     } else {
       if (normalized == dailyWord) {
         audio.target();
@@ -492,6 +536,7 @@ class GameController extends ChangeNotifier {
       buffer.writeln();
     }
     buffer.write(dailyWon ? '👑 ${dailyGuesses.length}/6' : '⚔️ X/6');
+    buffer.write(' • 🔥 $dailyPuzzleStreak • Rekor $bestDailyPuzzleStreak');
     return buffer.toString();
   }
 
@@ -519,6 +564,7 @@ class GameController extends ChangeNotifier {
     }
 
     if (currentLevel.words.contains(word)) {
+      lastRejectedWord = '';
       foundWords.add(word);
       totalWordsFound++;
       comboCount++;
@@ -540,6 +586,7 @@ class GameController extends ChangeNotifier {
 
     final isProperName = dictionary.isProperName(word);
     if (dictionary.contains(word) || isProperName) {
+      lastRejectedWord = '';
       bonusWords.add(word);
       coins += 1;
       comboCount++;
@@ -560,6 +607,7 @@ class GameController extends ChangeNotifier {
     }
 
     comboCount = 0;
+    lastRejectedWord = word;
     final wasFull = hearts >= maxNaturalHearts;
     hearts--;
     if (wasFull && hearts < maxNaturalHearts) {
@@ -628,8 +676,12 @@ class GameController extends ChangeNotifier {
     if (campaignCompleted) return null;
     if (!currentLevel.words.every(foundWords.contains)) return null;
 
+    final completedLevelNumber = currentLevel.number;
     levelsCompleted++;
     coins += 5;
+    _pendingMilestoneReward = await _grantMilestone(
+      completedLevelNumber,
+    );
     await _advanceMission(MissionType.levels);
     if (!hintUsedThisLevel) await _advanceMission(MissionType.noHintLevel);
 
@@ -647,6 +699,7 @@ class GameController extends ChangeNotifier {
     bonusWords.clear();
     hints.clear();
     comboCount = 0;
+    lastRejectedWord = '';
     hintUsedThisLevel = false;
     currentLevel = dictionary.buildLevel(displayLevel);
 
@@ -658,6 +711,67 @@ class GameController extends ChangeNotifier {
 
     _scheduleCloudSync();
     return chest;
+  }
+
+  bool isMilestoneLevel(int level) {
+    if (level == 10 || level == 25 || level == 50) return true;
+    return level >= 100 && level % 100 == 0;
+  }
+
+  LevelMilestoneReward? takePendingMilestoneReward() {
+    final reward = _pendingMilestoneReward;
+    _pendingMilestoneReward = null;
+    return reward;
+  }
+
+  Future<LevelMilestoneReward?> _grantMilestone(int level) async {
+    LevelMilestoneReward? reward;
+
+    if (level >= 100 && level % 100 == 0) {
+      reward = LevelMilestoneReward(
+        level: level,
+        title: '$level Bölümlük Büyük Fetih',
+        message: '+50 altın ve +1 taç parçası',
+        coins: 50,
+        crownFragments: 1,
+      );
+    } else if (level == 50) {
+      reward = const LevelMilestoneReward(
+        level: 50,
+        title: '50 Bölümlük Usta Fetih',
+        message: '+25 altın ve +1 can',
+        coins: 25,
+        hearts: 1,
+      );
+    } else if (level == 25) {
+      reward = const LevelMilestoneReward(
+        level: 25,
+        title: '25 Bölümlük Güçlü Başlangıç',
+        message: '+15 altın ve +1 ücretsiz ipucu',
+        coins: 15,
+        freeHints: 1,
+      );
+    } else if (level == 10) {
+      reward = const LevelMilestoneReward(
+        level: 10,
+        title: 'İlk 10 Bölüm Fethedildi',
+        message: '+10 altın',
+        coins: 10,
+      );
+    }
+
+    if (reward == null) return null;
+
+    coins += reward.coins;
+    hearts += reward.hearts;
+    freeHints += reward.freeHints;
+    crownFragments += reward.crownFragments;
+
+    await storage.setInt('coins', coins);
+    await storage.setInt('hearts', hearts);
+    await storage.setInt('free_hints', freeHints);
+    await storage.setInt('crown_fragments', crownFragments);
+    return reward;
   }
 
   Future<ChestReward> _grantChest(int chestNumber) async {
@@ -852,6 +966,10 @@ class GameController extends ChangeNotifier {
             bestDailyStreak,
             (cloud['bestDailyStreak'] as num?)?.toInt() ?? 0,
           );
+          bestDailyPuzzleStreak = max(
+            bestDailyPuzzleStreak,
+            (cloud['bestDailyPuzzleStreak'] as num?)?.toInt() ?? 0,
+          );
           bestCombo = max(
             bestCombo,
             (cloud['bestCombo'] as num?)?.toInt() ?? 0,
@@ -865,6 +983,10 @@ class GameController extends ChangeNotifier {
           await storage.setInt('total_words_found', totalWordsFound);
           await storage.setInt('daily_wins', dailyWins);
           await storage.setInt('best_login_streak', bestDailyStreak);
+          await storage.setInt(
+            'best_daily_puzzle_streak',
+            bestDailyPuzzleStreak,
+          );
           await storage.setInt('best_combo', bestCombo);
           await storage.setInt('crown_fragments', crownFragments);
           await storage.setInt('active_level_number', -1);
@@ -887,6 +1009,7 @@ class GameController extends ChangeNotifier {
     'totalWordsFound': totalWordsFound,
     'dailyWins': dailyWins,
     'bestDailyStreak': bestDailyStreak,
+    'bestDailyPuzzleStreak': bestDailyPuzzleStreak,
     'bestCombo': bestCombo,
     'crownFragments': crownFragments,
   };
@@ -914,6 +1037,26 @@ class GameController extends ChangeNotifier {
       (i) => revealed.contains(i) ? TurkishText.upper(word[i]) : '•',
     ).join(' ');
   }
+}
+
+class LevelMilestoneReward {
+  const LevelMilestoneReward({
+    required this.level,
+    required this.title,
+    required this.message,
+    this.coins = 0,
+    this.hearts = 0,
+    this.freeHints = 0,
+    this.crownFragments = 0,
+  });
+
+  final int level;
+  final String title;
+  final String message;
+  final int coins;
+  final int hearts;
+  final int freeHints;
+  final int crownFragments;
 }
 
 class HintResult {

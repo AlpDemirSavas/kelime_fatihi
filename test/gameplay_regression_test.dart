@@ -10,9 +10,16 @@ import 'package:kelime_fatihi/services/dictionary_service.dart';
 import 'package:kelime_fatihi/services/purchase_service.dart';
 import 'package:kelime_fatihi/services/storage_service.dart';
 import 'package:kelime_fatihi/widgets/letter_wheel.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+  });
 
   test('0 can ile doğru hedef kelime bile kabul edilmez', () async {
     final dictionary = DictionaryService();
@@ -70,6 +77,98 @@ void main() {
     expect(result.lostHeart, isFalse);
     expect(controller.hearts, 5);
     expect(controller.bonusWords, contains('ahmet'));
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
+  test('reddedilen son kelime tutulur ve geçerli kelimede temizlenir', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: StorageService(),
+      ads: AdService(),
+      purchases: PurchaseService(),
+      audio: AudioService(),
+      account: AccountService(firebaseReady: false),
+    );
+
+    controller.currentLevel = dictionary.buildLevel(1);
+    controller.hearts = 5;
+
+    await controller.submitConquestWord('xyz');
+    expect(controller.lastRejectedWord, 'xyz');
+
+    await controller.submitConquestWord(controller.currentLevel.words.first);
+    expect(controller.lastRejectedWord, isEmpty);
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
+  test('10. bölüm kilometre taşı ödülünü yalnız bir kez üretir', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: StorageService(),
+      ads: AdService(),
+      purchases: PurchaseService(),
+      audio: AudioService(),
+      account: AccountService(firebaseReady: false),
+    );
+
+    controller.levelNumber = 10;
+    controller.levelsCompleted = 9;
+    controller.currentLevel = dictionary.buildLevel(10);
+    controller.foundWords.addAll(controller.currentLevel.words);
+    final coinsBefore = controller.coins;
+
+    await controller.completeLevel();
+    final reward = controller.takePendingMilestoneReward();
+
+    expect(controller.isMilestoneLevel(10), isTrue);
+    expect(reward, isNotNull);
+    expect(reward!.level, 10);
+    expect(reward.coins, 10);
+    expect(controller.coins, greaterThanOrEqualTo(coinsBefore + 15));
+    expect(controller.takePendingMilestoneReward(), isNull);
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
+  test('günün kelimesi kazanılınca günlük seri ve rekor artar', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: StorageService(),
+      ads: AdService(),
+      purchases: PurchaseService(),
+      audio: AudioService(),
+      account: AccountService(firebaseReady: false),
+    );
+
+    controller.dailyDateKey = '2099-12-31';
+    controller.dailyWord = dictionary.dailyWord(DateTime(2099, 12, 31));
+    final error = await controller.submitDaily(controller.dailyWord);
+
+    expect(error, isNull);
+    expect(controller.dailyFinished, isTrue);
+    expect(controller.dailyWon, isTrue);
+    expect(controller.dailyPuzzleStreak, 1);
+    expect(controller.bestDailyPuzzleStreak, greaterThanOrEqualTo(1));
 
     controller.ads.dispose();
     controller.purchases.dispose();

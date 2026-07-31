@@ -24,6 +24,8 @@ class _DailyScreenState extends State<DailyScreen> {
   String current = '';
   bool celebrate = false;
   bool _adsPrepared = false;
+  DateTime _now = DateTime.now();
+  Timer? _countdownTimer;
 
   // iPhone Türkçe Q sıralaması. Tuşlar FittedBox ile küçültülmez; her satır
   // ekran genişliğini paylaşır ve görünen yüzeyin tamamı dokunma alanıdır.
@@ -32,6 +34,36 @@ class _DailyScreenState extends State<DailyScreen> {
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ş', 'i'],
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'ö', 'ç'],
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  Duration get _nextDailyIn {
+    final tomorrow = DateTime(_now.year, _now.month, _now.day + 1);
+    return tomorrow.difference(_now);
+  }
+
+  String get _nextDailyLabel {
+    final seconds = _nextDailyIn.inSeconds.clamp(0, 24 * 60 * 60);
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${remainingSeconds.toString().padLeft(2, '0')}';
+  }
 
   @override
   void didChangeDependencies() {
@@ -88,19 +120,63 @@ class _DailyScreenState extends State<DailyScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _MiniStat(
-                          label: 'Giriş serisi',
-                          value: '🔥 ${game.dailyStreak}',
+                          label: 'Günlük seri',
+                          value: '🔥 ${game.dailyPuzzleStreak}',
+                        ),
+                        _MiniStat(
+                          label: 'Seri rekoru',
+                          value: '🏆 ${game.bestDailyPuzzleStreak}',
                         ),
                         _MiniStat(
                           label: 'Galibiyet',
                           value: '${game.dailyWins}',
                         ),
-                        const _MiniStat(label: 'Ödül', value: '+30 🪙'),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: .18),
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .08),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.schedule_rounded,
+                        size: 16,
+                        color: GameTheme.gold,
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        'Yeni kelimeye $_nextDailyLabel',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '•  Ödül +30 🪙',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .58),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
@@ -146,6 +222,29 @@ class _DailyScreenState extends State<DailyScreen> {
                               fontWeight: FontWeight.w900,
                               fontSize: 17,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _ResultBadge(
+                                icon: '🔥',
+                                label: 'Seri',
+                                value: '${game.dailyPuzzleStreak}',
+                              ),
+                              _ResultBadge(
+                                icon: '🏆',
+                                label: 'Rekor',
+                                value: '${game.bestDailyPuzzleStreak}',
+                              ),
+                              _ResultBadge(
+                                icon: '⏳',
+                                label: 'Yeni kelime',
+                                value: _nextDailyLabel,
+                              ),
+                            ],
                           ),
                         ],
                       ],
@@ -278,7 +377,15 @@ class _DailyScreenState extends State<DailyScreen> {
       celebrate = game.dailyWon;
     });
 
-    if (game.dailyWon) HapticFeedback.mediumImpact();
+    if (justFinished) {
+      if (game.dailyWon) {
+        HapticFeedback.mediumImpact();
+      } else {
+        HapticFeedback.heavyImpact();
+      }
+    } else {
+      HapticFeedback.lightImpact();
+    }
 
     // Günlük tur yalnızca tamamlandığı anda bir kez reklam dener. Reklam hazır
     // değilse sonuç ekranı bekletilmez; sonraki reklam arka planda hazırlanır.
@@ -454,6 +561,34 @@ class _ActionKey extends StatelessWidget {
             child: Icon(icon),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ResultBadge extends StatelessWidget {
+  const _ResultBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final String icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: .09)),
+      ),
+      child: Text(
+        '$icon $label: $value',
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
       ),
     );
   }

@@ -33,6 +33,7 @@ class _ConquestScreenState extends State<ConquestScreen> {
   AudioService? _audio;
   int? _musicRegion;
   bool _adsPrepared = false;
+  Timer? _celebrationTimer;
 
   @override
   void didChangeDependencies() {
@@ -52,6 +53,7 @@ class _ConquestScreenState extends State<ConquestScreen> {
 
   @override
   void dispose() {
+    _celebrationTimer?.cancel();
     _audio?.stopRegionTheme();
     super.dispose();
   }
@@ -317,6 +319,47 @@ class _ConquestScreenState extends State<ConquestScreen> {
                                 ),
                               ),
                       ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        child: game.lastRejectedWord.isEmpty
+                            ? const SizedBox(height: 2)
+                            : Container(
+                                key: ValueKey(game.lastRejectedWord),
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: GameTheme.danger.withValues(alpha: .1),
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color: GameTheme.danger.withValues(
+                                      alpha: .28,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.close_rounded,
+                                      size: 15,
+                                      color: GameTheme.danger,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Son reddedilen: ${TurkishText.upper(game.lastRejectedWord)}',
+                                      style: const TextStyle(
+                                        color: GameTheme.danger,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
                       Center(
                         child: LetterWheel(
                           letters: level.letters,
@@ -370,6 +413,7 @@ class _ConquestScreenState extends State<ConquestScreen> {
   }
 
   Future<void> _submit(GameController game, String word) async {
+    final completedLevelNumber = game.currentLevel.number;
     final result = await game.submitConquestWord(word);
     if (!mounted) return;
 
@@ -382,14 +426,19 @@ class _ConquestScreenState extends State<ConquestScreen> {
     } else if (!result.isDuplicate) {
       game.audio.invalid();
       HapticFeedback.heavyImpact();
+    } else {
+      HapticFeedback.selectionClick();
     }
     if (result.comboMessage.isNotEmpty) game.audio.combo();
+
+    final milestone = result.completed &&
+        game.isMilestoneLevel(completedLevelNumber);
 
     setState(() {
       flash = result.message;
       comboFlash = result.comboMessage;
-      celebrate = result.completed;
     });
+    if (milestone) _startMilestoneCelebration();
 
     // Son yanlış deneme mevcut son canı da tükettiyse kullanıcıyı bir
     // sonraki kelimeyi denemeye zorlamadan can kazanma ekranını aç.
@@ -398,55 +447,80 @@ class _ConquestScreenState extends State<ConquestScreen> {
       return;
     }
 
-    if (result.completed) {
-      game.audio.victory();
-      await Future<void>.delayed(const Duration(milliseconds: 650));
-      if (!mounted) return;
+    if (!result.completed) return;
 
-      // Zorunlu reklam yalnızca önceden yüklenmişse gösterilir. İnternet yoksa
-      // veya reklam hazır değilse oyun hiçbir bekleme olmadan devam eder.
-      await game.showLevelEndAdIfAvailable();
-      if (!mounted) return;
+    game.audio.victory();
+    await Future<void>.delayed(
+      Duration(milliseconds: milestone ? 850 : 450),
+    );
+    if (!mounted) return;
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(
-            game.currentLevel.number == 10000
-                ? '🏆 Büyük Sefer Tamamlandı!'
-                : '👑 Bölüm Fethedildi!',
-          ),
-          content: Text(
-            game.currentLevel.number == 10000
-                ? '10.000. bölümü de tamamladın. Son bölüm ödülü: +5 altın.'
-                : 'Tüm hedef kelimeleri buldun. Bölüm ödülü: +5 altın.',
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('DEVAM'),
-            ),
-          ],
-        ),
-      );
+    // Zorunlu reklam yalnızca önceden yüklenmişse gösterilir. İnternet yoksa
+    // veya reklam hazır değilse oyun hiçbir bekleme olmadan devam eder.
+    await game.showLevelEndAdIfAvailable();
+    if (!mounted) return;
 
-      final chest = await game.completeLevel();
-      if (!mounted) return;
-      _musicRegion = game.currentRegion.index;
-      game.audio.playRegionTheme(_musicRegion!);
-      if (chest != null) {
-        game.audio.chest();
-        await _showChest(chest);
-      }
-      if (mounted) {
-        setState(() {
-          celebrate = false;
-          flash = '';
-          comboFlash = '';
-        });
-      }
+    final chest = await game.completeLevel();
+    final milestoneReward = game.takePendingMilestoneReward();
+    if (!mounted) return;
+
+    _musicRegion = game.currentRegion.index;
+    game.audio.playRegionTheme(_musicRegion!);
+
+    late final String dialogTitle;
+    late final String dialogMessage;
+    if (completedLevelNumber == 10000) {
+      final milestoneMessage =
+          milestoneReward?.message ?? '+50 altın ve +1 taç parçası';
+      dialogTitle = '🏆 Büyük Sefer Tamamlandı!';
+      dialogMessage =
+          '10.000. bölümü de tamamladın. Bölüm ödülü: +5 altın.\n\n'
+          'Büyük sefer ödülü: $milestoneMessage';
+    } else if (milestoneReward != null) {
+      dialogTitle = '🎉 ${milestoneReward.title}';
+      dialogMessage =
+          'Bölüm ödülü: +5 altın.\n\n'
+          'Kilometre taşı ödülü: ${milestoneReward.message}';
+    } else {
+      dialogTitle = '👑 Bölüm Fethedildi!';
+      dialogMessage =
+          'Tüm hedef kelimeleri buldun. Bölüm ödülü: +5 altın.';
     }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogTitle),
+        content: Text(dialogMessage),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('DEVAM'),
+          ),
+        ],
+      ),
+    );
+
+    if (chest != null) {
+      game.audio.chest();
+      await _showChest(chest);
+    }
+    if (mounted) {
+      setState(() {
+        celebrate = false;
+        flash = '';
+        comboFlash = '';
+      });
+    }
+  }
+
+  void _startMilestoneCelebration() {
+    _celebrationTimer?.cancel();
+    setState(() => celebrate = true);
+    _celebrationTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (mounted) setState(() => celebrate = false);
+    });
   }
 
   Future<void> _showChest(ChestReward reward) async {

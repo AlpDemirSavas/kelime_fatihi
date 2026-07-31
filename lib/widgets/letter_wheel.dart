@@ -89,15 +89,53 @@ class _LetterWheelState extends State<LetterWheel> {
                   ),
 
                   Center(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 120),
-                      child: Text(
-                        TurkishText.upper(_word),
-                        key: ValueKey(_word),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: GameTheme.gold,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      constraints: BoxConstraints(maxWidth: size * .52),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _word.isEmpty ? 0 : 14,
+                        vertical: _word.isEmpty ? 0 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _word.isEmpty
+                            ? Colors.transparent
+                            : const Color(0xE6122C45),
+                        borderRadius: BorderRadius.circular(18),
+                        border: _word.isEmpty
+                            ? null
+                            : Border.all(
+                                color: GameTheme.gold.withValues(alpha: .48),
+                              ),
+                        boxShadow: _word.isEmpty
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: GameTheme.cyan.withValues(alpha: .2),
+                                  blurRadius: 20,
+                                ),
+                              ],
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 120),
+                        child: FittedBox(
+                          key: ValueKey(_word),
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            TurkishText.upper(_word),
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: _word.length <= 6 ? 24 : 21,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: _word.length <= 6 ? 1.6 : 1.0,
+                              color: GameTheme.gold,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: .55),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -112,41 +150,47 @@ class _LetterWheelState extends State<LetterWheel> {
                       top: c.dy - nodeSize / 2,
                       width: nodeSize,
                       height: nodeSize,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: selected
-                              ? GameTheme.cyan
-                              : const Color(0xFF173B60),
-                          border: Border.all(
+                      child: AnimatedScale(
+                        scale: selected ? 1.1 : 1,
+                        duration: const Duration(milliseconds: 110),
+                        curve: Curves.easeOutBack,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 100),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
                             color: selected
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: .16),
-                            width: selected ? 3 : 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              blurRadius: selected ? 24 : 10,
-                              color: (
-                                  selected ? GameTheme.cyan : Colors.black
-                              ).withValues(alpha: .35),
+                                ? GameTheme.cyan
+                                : const Color(0xFF173B60),
+                            border: Border.all(
+                              color: selected
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: .16),
+                              width: selected ? 3 : 1,
                             ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          TurkishText.upper(widget.letters[i]),
-                          style: TextStyle(
-                            fontSize: count <= 7
-                                ? 26
-                                : count == 8
-                                ? 23
-                                : 21,
-                            fontWeight: FontWeight.w900,
-                            color: selected
-                                ? const Color(0xFF04121E)
-                                : Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                blurRadius: selected ? 28 : 10,
+                                spreadRadius: selected ? 2 : 0,
+                                color: (
+                                    selected ? GameTheme.cyan : Colors.black
+                                ).withValues(alpha: .38),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            TurkishText.upper(widget.letters[i]),
+                            style: TextStyle(
+                              fontSize: count <= 7
+                                  ? 26
+                                  : count == 8
+                                  ? 23
+                                  : 21,
+                              fontWeight: FontWeight.w900,
+                              color: selected
+                                  ? const Color(0xFF04121E)
+                                  : Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -307,9 +351,20 @@ class _WheelPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = GameTheme.cyan.withValues(alpha: .82)
+        ..color = GameTheme.cyan.withValues(alpha: .2)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
+        ..strokeWidth = 22
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 7),
+    );
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = GameTheme.cyan.withValues(alpha: .94)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 11
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../core/turkish_text.dart';
+import '../data/proper_names.dart';
 import '../models/conquest_level.dart';
 
 List<List<String>> _parseDictionaryPayload(List<String> texts) {
@@ -50,6 +51,7 @@ class DictionaryService {
   final Set<String> _words = <String>{};
   final List<String> _dailyWords = <String>[];
   final Set<String> _levelWords = <String>{};
+  final Set<String> _properNames = commonProperNames;
   final List<String> _seedWords = <String>[];
   final List<List<String>> _levelTargets = <List<String>>[];
   final Map<String, List<String>> _levelWordsBySignature =
@@ -59,6 +61,7 @@ class DictionaryService {
   bool get isLoaded => _loaded;
   int get wordCount => _words.length;
   int get levelWordCount => _levelWords.length;
+  int get properNameCount => _properNames.length;
   int get seedCount => _seedWords.length;
 
   Future<void> load() async {
@@ -172,6 +175,12 @@ class DictionaryService {
 
   bool contains(String value) =>
       _words.contains(TurkishText.normalizeWord(value));
+
+  /// Yaygın kişi adlarını yalnız bonus doğrulamasında tanır. Bu havuz
+  /// `_words` veya `_levelWords` içine eklenmediği için hiçbir özel isim
+  /// zorunlu bölüm hedefi ya da Günün Kelimesi cevabı olamaz.
+  bool isProperName(String value) =>
+      _properNames.contains(TurkishText.normalizeWord(value));
 
   String dailyWord(DateTime now) {
     if (_dailyWords.isEmpty) return 'kalem';

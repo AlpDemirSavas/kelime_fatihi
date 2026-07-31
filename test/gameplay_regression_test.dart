@@ -44,6 +44,40 @@ void main() {
     controller.dispose();
   });
 
+
+  test('yaygın özel isim bonus olur ve can eksiltmez', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: StorageService(),
+      ads: AdService(),
+      purchases: PurchaseService(),
+      audio: AudioService(),
+      account: AccountService(firebaseReady: false),
+    );
+
+    controller.currentLevel = dictionary.buildLevel(1);
+    controller.hearts = 5;
+
+    expect(dictionary.isProperName('ahmet'), isTrue);
+    expect(dictionary.isProperName('merve'), isTrue);
+    expect(dictionary.contains('ahmet'), isFalse);
+
+    final result = await controller.submitConquestWord('ahmet');
+
+    expect(result.isBonus, isTrue);
+    expect(result.lostHeart, isFalse);
+    expect(controller.hearts, 5);
+    expect(controller.bonusWords, contains('ahmet'));
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
   testWidgets('harf tekerinde geri sürükleme son seçimleri geri alır', (
     tester,
   ) async {

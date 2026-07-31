@@ -538,7 +538,8 @@ class GameController extends ChangeNotifier {
       );
     }
 
-    if (dictionary.contains(word)) {
+    final isProperName = dictionary.isProperName(word);
+    if (dictionary.contains(word) || isProperName) {
       bonusWords.add(word);
       coins += 1;
       comboCount++;
@@ -550,7 +551,12 @@ class GameController extends ChangeNotifier {
       await storage.setInt('best_combo', bestCombo);
       await _persistConquest();
       notifyListeners();
-      return ConquestResult.bonus(word, comboMessage: comboMessage);
+      return isProperName
+          ? ConquestResult.properNameBonus(
+              word,
+              comboMessage: comboMessage,
+            )
+          : ConquestResult.bonus(word, comboMessage: comboMessage);
     }
 
     comboCount = 0;
@@ -745,6 +751,14 @@ class GameController extends ChangeNotifier {
   Future<bool> showLevelEndAdIfAvailable() async {
     if (isAdFree) return false;
     return ads.showInterstitialIfReady();
+  }
+
+  /// Günün Kelimesi yalnız bir kez tamamlanabildiği için, tur kazanıldığında
+  /// veya altı hak bittiğinde tek bir hazır interstitial gösterir. Reklam
+  /// hazır değilse günlük sonucu veya offline oynanışı bekletmez.
+  Future<bool> showDailyEndAdIfAvailable() async {
+    if (isAdFree) return false;
+    return ads.showInterstitialWhenReady();
   }
 
   Future<void> restorePurchases() async {
@@ -957,6 +971,20 @@ class ConquestResult {
         isDuplicate: false,
         comboMessage: comboMessage,
       );
+
+  factory ConquestResult.properNameBonus(
+    String word, {
+    required String comboMessage,
+  }) => ConquestResult._(
+    message: '${TurkishText.upper(word)} özel isim bonusu! +1 altın',
+    isTarget: false,
+    isBonus: true,
+    completed: false,
+    lostHeart: false,
+    noHearts: false,
+    isDuplicate: false,
+    comboMessage: comboMessage,
+  );
 
   factory ConquestResult.duplicate(String word) => ConquestResult._(
     message: '${TurkishText.upper(word)} bu bölümde zaten kullanıldı.',

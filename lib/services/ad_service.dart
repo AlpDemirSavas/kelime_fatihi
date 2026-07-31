@@ -278,6 +278,27 @@ class AdService {
     unawaited(showInterstitialIfReady());
   }
 
+  /// Interstitial henüz belleğe gelmediyse kısa bir süre yüklenmesini bekler.
+  /// Günlük tur sonu gibi reklamın tek seferlik ve öngörülebilir olması gereken
+  /// noktalarda kullanılır. Süre dolarsa oyun akışı reklamsız devam eder.
+  Future<bool> showInterstitialWhenReady({
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
+    await initialize();
+    if (!_initialized || _interstitialId.isEmpty) return false;
+
+    if (_interstitial == null) loadInterstitial();
+
+    final deadline = DateTime.now().add(timeout);
+    while (_interstitial == null &&
+        _interstitialLoading &&
+        DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+
+    return showInterstitialIfReady();
+  }
+
   Future<bool> showInterstitialIfReady() async {
     final ad = _interstitial;
 

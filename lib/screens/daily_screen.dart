@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -21,14 +23,23 @@ class DailyScreen extends StatefulWidget {
 class _DailyScreenState extends State<DailyScreen> {
   String current = '';
   bool celebrate = false;
+  bool _adsPrepared = false;
 
-  // Standart Türkçe Q dizilimi. q/w/x günlük cevaplarda nadiren kullanılsa
-  // bile klavye düzeni iOS Türkçe Q ile aynı yerde kalır.
+  // iPhone Türkçe Q sıralaması. Tuşlar FittedBox ile küçültülmez; her satır
+  // ekran genişliğini paylaşır ve görünen yüzeyin tamamı dokunma alanıdır.
   static const rows = [
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'ı', 'o', 'p', 'ğ', 'ü'],
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ş', 'i'],
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'ö', 'ç'],
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_adsPrepared) return;
+    _adsPrepared = true;
+    unawaited(GameScope.of(context).prepareGameplayAds());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +76,13 @@ class _DailyScreenState extends State<DailyScreen> {
           child: SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 58),
+                const SizedBox(height: 46),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GlassCard(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: 14,
+                      vertical: 10,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -84,66 +95,65 @@ class _DailyScreenState extends State<DailyScreen> {
                           label: 'Galibiyet',
                           value: '${game.dailyWins}',
                         ),
-                        _MiniStat(label: 'Ödül', value: '+30 🪙'),
+                        const _MiniStat(label: 'Ödül', value: '+30 🪙'),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children: [
-                          ...List.generate(6, (row) {
-                            final word = row < guesses.length
-                                ? guesses[row]
-                                : row == guesses.length && !game.dailyFinished
-                                ? current
-                                : '';
-                            final feedback = row < guesses.length
-                                ? game.evaluateDaily(guesses[row])
-                                : null;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 7),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(5, (col) {
-                                  final letter = col < word.length
-                                      ? word[col]
-                                      : '';
-                                  final state = feedback == null
-                                      ? null
-                                      : feedback[col].state;
-                                  return _DailyTile(
-                                    letter: letter,
-                                    state: state,
-                                  );
-                                }),
-                              ),
-                            );
-                          }),
-                          if (game.dailyFinished) ...[
-                            const SizedBox(height: 14),
-                            Text(
-                              game.dailyWon
-                                  ? 'Muhteşem! Bugünün kelimesini fethettin. 👑'
-                                  : 'Bugünün kelimesi: ${TurkishText.upper(game.dailyWord)}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 17,
-                              ),
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                    child: Column(
+                      children: [
+                        ...List.generate(6, (row) {
+                          final word = row < guesses.length
+                              ? guesses[row]
+                              : row == guesses.length && !game.dailyFinished
+                              ? current
+                              : '';
+                          final feedback = row < guesses.length
+                              ? game.evaluateDaily(guesses[row])
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(5, (col) {
+                                final letter = col < word.length
+                                    ? word[col]
+                                    : '';
+                                final state = feedback == null
+                                    ? null
+                                    : feedback[col].state;
+                                return _DailyTile(
+                                  letter: letter,
+                                  state: state,
+                                );
+                              }),
                             ),
-                          ],
+                          );
+                        }),
+                        if (game.dailyFinished) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            game.dailyWon
+                                ? 'Muhteşem! Bugünün kelimesini fethettin. 👑'
+                                : 'Bugünün kelimesi: ${TurkishText.upper(game.dailyWord)}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 17,
+                            ),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
                 if (!game.dailyFinished) _keyboard(game),
-                const SizedBox(height: 12),
+                const SizedBox(height: 18),
               ],
             ),
           ),
@@ -156,45 +166,49 @@ class _DailyScreenState extends State<DailyScreen> {
     final keyStates = _dailyKeyboardStates(game);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 7),
       child: Column(
         children: [
-          for (final row in rows)
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: row.map((letter) {
-                  final state = keyStates[letter];
-                  final disabled = state == LetterState.absent;
-
-                  return _Key(
-                    label: TurkishText.upper(letter),
-                    state: state,
-                    enabled: !disabled,
-                    onTap: () {
-                      if (current.length >= 5) return;
-                      setState(() => current += letter);
-                      HapticFeedback.selectionClick();
-                      game.audio.select();
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
+          _KeyboardRow(
+            letters: rows[0],
+            states: keyStates,
+            onLetter: (letter) => _appendLetter(game, letter),
+          ),
+          const SizedBox(height: 4),
+          _KeyboardRow(
+            letters: rows[1],
+            states: keyStates,
+            horizontalInset: 8,
+            onLetter: (letter) => _appendLetter(game, letter),
+          ),
+          const SizedBox(height: 4),
+          _KeyboardRow(
+            letters: rows[2],
+            states: keyStates,
+            horizontalInset: 28,
+            onLetter: (letter) => _appendLetter(game, letter),
+          ),
+          const SizedBox(height: 9),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _ActionKey(
                 icon: Icons.backspace_outlined,
+                tooltip: 'Sil · uzun basınca tamamını temizle',
                 onTap: () {
                   if (current.isEmpty) return;
                   setState(
                     () => current = current.substring(0, current.length - 1),
                   );
+                  HapticFeedback.selectionClick();
+                },
+                onLongPress: () {
+                  if (current.isEmpty) return;
+                  setState(() => current = '');
+                  HapticFeedback.mediumImpact();
                 },
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 10),
               FilledButton.icon(
                 onPressed: current.length == 5 ? () => _submit(game) : null,
                 icon: const Icon(Icons.auto_awesome_rounded),
@@ -202,13 +216,27 @@ class _DailyScreenState extends State<DailyScreen> {
                   'FETHET',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
-                style: FilledButton.styleFrom(minimumSize: const Size(150, 48)),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(172, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  void _appendLetter(GameController game, String letter) {
+    // Daha önce "yok" olarak işaretlenen harfler renkli kalır ama kullanıcı
+    // yeni kelime fikirleri deneyebilmek için hepsine tekrar basabilir.
+    if (current.length >= 5) return;
+    setState(() => current += letter);
+    HapticFeedback.selectionClick();
+    game.audio.select();
   }
 
   Map<String, LetterState> _dailyKeyboardStates(GameController game) {
@@ -235,6 +263,7 @@ class _DailyScreenState extends State<DailyScreen> {
   };
 
   Future<void> _submit(GameController game) async {
+    final wasFinished = game.dailyFinished;
     final error = await game.submitDaily(current);
     if (!mounted) return;
     if (error != null) {
@@ -242,11 +271,22 @@ class _DailyScreenState extends State<DailyScreen> {
       HapticFeedback.heavyImpact();
       return;
     }
+
+    final justFinished = !wasFinished && game.dailyFinished;
     setState(() {
       current = '';
       celebrate = game.dailyWon;
     });
+
     if (game.dailyWon) HapticFeedback.mediumImpact();
+
+    // Günlük tur yalnızca tamamlandığı anda bir kez reklam dener. Reklam hazır
+    // değilse sonuç ekranı bekletilmez; sonraki reklam arka planda hazırlanır.
+    if (justFinished) {
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      if (!mounted) return;
+      await game.showDailyEndAdIfAvailable();
+    }
   }
 
   void _toast(String text) {
@@ -270,8 +310,8 @@ class _DailyTile extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 280),
       margin: const EdgeInsets.symmetric(horizontal: 3),
-      width: 54,
-      height: 54,
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(13),
@@ -289,7 +329,7 @@ class _DailyTile extends StatelessWidget {
       child: Text(
         TurkishText.upper(letter),
         style: TextStyle(
-          fontSize: 26,
+          fontSize: 24,
           fontWeight: FontWeight.w900,
           color: state == LetterState.present || state == LetterState.correct
               ? const Color(0xFF07111F)
@@ -300,17 +340,49 @@ class _DailyTile extends StatelessWidget {
   }
 }
 
-class _Key extends StatelessWidget {
-  const _Key({
-    required this.label,
-    required this.onTap,
-    required this.enabled,
-    this.state,
+class _KeyboardRow extends StatelessWidget {
+  const _KeyboardRow({
+    required this.letters,
+    required this.states,
+    required this.onLetter,
+    this.horizontalInset = 0,
   });
+
+  final List<String> letters;
+  final Map<String, LetterState> states;
+  final ValueChanged<String> onLetter;
+  final double horizontalInset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalInset),
+      child: SizedBox(
+        height: 50,
+        child: Row(
+          children: [
+            for (var index = 0; index < letters.length; index++) ...[
+              if (index > 0) const SizedBox(width: 3),
+              Expanded(
+                child: _Key(
+                  label: TurkishText.upper(letters[index]),
+                  state: states[letters[index]],
+                  onTap: () => onLetter(letters[index]),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Key extends StatelessWidget {
+  const _Key({required this.label, required this.onTap, this.state});
 
   final String label;
   final VoidCallback onTap;
-  final bool enabled;
   final LetterState? state;
 
   @override
@@ -318,34 +390,31 @@ class _Key extends StatelessWidget {
     final background = switch (state) {
       LetterState.correct => GameTheme.mint,
       LetterState.present => GameTheme.gold,
-      LetterState.absent => const Color(0xFF202A35),
-      null => Colors.white.withValues(alpha: .1),
+      LetterState.absent => const Color(0xFF263140),
+      null => Colors.white.withValues(alpha: .11),
     };
     final foreground = switch (state) {
       LetterState.correct || LetterState.present => const Color(0xFF07111F),
-      LetterState.absent => Colors.white.withValues(alpha: .28),
+      LetterState.absent => Colors.white.withValues(alpha: .68),
       null => Colors.white,
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(2),
+    return Semantics(
+      button: true,
+      label: '$label harfi',
       child: Material(
         color: background,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(9),
         child: InkWell(
-          onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox(
-            width: 30,
-            height: 42,
-            child: Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: foreground,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(9),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: foreground,
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
               ),
             ),
           ),
@@ -356,13 +425,37 @@ class _Key extends StatelessWidget {
 }
 
 class _ActionKey extends StatelessWidget {
-  const _ActionKey({required this.icon, required this.onTap});
+  const _ActionKey({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
   final IconData icon;
+  final String tooltip;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton.filledTonal(onPressed: onTap, icon: Icon(icon));
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox(
+            width: 58,
+            height: 50,
+            child: Icon(icon),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -370,6 +463,7 @@ class _MiniStat extends StatelessWidget {
   const _MiniStat({required this.label, required this.value});
   final String label;
   final String value;
+
   @override
   Widget build(BuildContext context) {
     return Column(

@@ -233,6 +233,7 @@ void main() {
     final dictionary = DictionaryService();
     await dictionary.load();
 
+    expect(dictionary.dailyWordCount, 600);
     expect(dictionary.dailyWord(DateTime(2026, 1, 1)), 'kalem');
     expect(dictionary.dailyWord(DateTime(2026, 8, 6)), 'yazar');
   });
@@ -360,6 +361,7 @@ void main() {
     await dictionary.load();
 
     expect(dictionary.wordCount, greaterThan(26000));
+    // V16 stricter mandatory denylist intentionally keeps the target pool clean.
     expect(dictionary.levelWordCount, greaterThan(22500));
     expect(dictionary.seedCount, DictionaryService.maxLevel);
 

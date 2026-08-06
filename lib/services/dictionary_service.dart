@@ -65,6 +65,7 @@ class DictionaryService {
 
   bool get isLoaded => _loaded;
   int get wordCount => _words.length;
+  int get dailyWordCount => _dailyWords.length;
   int get levelWordCount => _levelWords.length;
   int get properNameCount => _properNames.length;
   int get seedCount => _seedWords.length;

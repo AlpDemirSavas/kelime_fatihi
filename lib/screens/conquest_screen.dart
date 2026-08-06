@@ -153,6 +153,7 @@ class _ConquestScreenState extends State<ConquestScreen>
         isAdFree: game.isAdFree,
       ),
       appBar: AppBar(
+        toolbarHeight: 50,
         backgroundColor: Colors.transparent,
         title: Text('${region.emoji} Bölüm ${level.number}'),
         actions: [
@@ -179,18 +180,6 @@ class _ConquestScreenState extends State<ConquestScreen>
         ],
       ),
       extendBodyBehindAppBar: true,
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'bonus_words',
-        onPressed: () => _showBonusWords(game),
-        backgroundColor: const Color(0xFF173B60),
-        foregroundColor: GameTheme.gold,
-        icon: const Icon(Icons.stars_rounded),
-        label: Text(
-          'Bonus ${game.bonusWords.length}',
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
       body: CelebrationOverlay(
         active: celebrate,
         intensity: _celebrationIntensity,
@@ -203,10 +192,10 @@ class _ConquestScreenState extends State<ConquestScreen>
           child: SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 54),
+                const SizedBox(height: 46),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 92),
+                    padding: const EdgeInsets.fromLTRB(18, 4, 18, 32),
                     children: [
                       GlassCard(
                         padding: const EdgeInsets.symmetric(
@@ -250,8 +239,9 @@ class _ConquestScreenState extends State<ConquestScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
@@ -259,17 +249,58 @@ class _ConquestScreenState extends State<ConquestScreen>
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
                           ),
-                          Text(
-                            '${game.foundWords.length}/${level.words.length}',
-                            style: TextStyle(
-                              color: region.accent,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 18,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${game.foundWords.length}/${level.words.length}',
+                                style: TextStyle(
+                                  color: region.accent,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                height: 30,
+                                child: TextButton.icon(
+                                  onPressed: () => _showBonusWords(game),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: GameTheme.gold,
+                                    backgroundColor: const Color(0xFF173B60),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(99),
+                                      side: BorderSide(
+                                        color: GameTheme.gold.withValues(
+                                          alpha: .22,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.stars_rounded,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    'Bonus ${game.bonusWords.length}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
                       GlassCard(
                         child: Wrap(
                           spacing: 8,
@@ -319,7 +350,7 @@ class _ConquestScreenState extends State<ConquestScreen>
                                 ),
                               )
                             : flash.isEmpty
-                            ? const SizedBox(height: 30)
+                            ? const SizedBox(height: 18)
                             : Center(
                                 key: ValueKey(flash),
                                 child: Text(

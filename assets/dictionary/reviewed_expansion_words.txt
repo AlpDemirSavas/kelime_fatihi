@@ -1,5 +1,3 @@
-# Elle gözden geçirilmiş ek oyun kelimeleri.
-# Çekimli zaman/kip, iyelik/hal yüzeyleri ve fiilimsiler topluca üretilmez.
 aboneli
 abonesiz
 adacık
@@ -8,6 +6,7 @@ adaptif
 adaylık
 afilli
 ahlaklı
+akan
 akaryakıtçı
 akortçu
 akrabalık
@@ -25,6 +24,8 @@ albenisiz
 alerjisiz
 alkollü
 alkolsüz
+alma
+alman
 alınganlık
 alışkanlık
 amaçlı
@@ -34,9 +35,12 @@ ambalajsız
 ambarcı
 anahtarcı
 anahtarlık
+anaç
+anka
 anlamlı
 anlayışlı
 anlayışsız
+anlaş
 anlaşmazlık
 antikacı
 antrenmanlı
@@ -55,6 +59,7 @@ arıcı
 arıtıcı
 arşivci
 arşivlik
+arşın
 asansörlü
 asansörsüz
 asfaltlı
@@ -107,6 +112,7 @@ balerinlik
 baloncu
 balıkçı
 balıkçılık
+bana
 bandajlı
 bandrollü
 bankacı
@@ -122,6 +128,7 @@ bastoncu
 bataryalı
 bataryasız
 bavulcu
+baya
 bayatlık
 bayilik
 bayrakçı
@@ -158,10 +165,12 @@ benzersiz
 benzinci
 beraberlik
 bereketsiz
+besi
 besici
 besleyici
 besteci
 betoncu
+beyit
 bezelyeli
 bezginlik
 beşli
@@ -390,6 +399,7 @@ elektrikçi
 elektronikçi
 elçilik
 emekçi
+emel
 emirlik
 emlakçı
 emniyetli
@@ -444,6 +454,7 @@ felsefeci
 felçli
 ferasetli
 fermuarlı
+fevri
 figürlü
 figürsüz
 filmci
@@ -631,12 +642,14 @@ işsiz
 işsizlik
 iştahlı
 iştahsız
+jel
 kadınsı
 kafeci
 kafeinli
 kafeinsiz
 kahvaltıcı
 kahveci
+kalan
 kalpli
 kalpsiz
 kamusal
@@ -649,6 +662,7 @@ kapasitesiz
 kaprisli
 kaprissiz
 kapıcı
+karaca
 karakterli
 karaktersiz
 kararlı
@@ -821,6 +835,7 @@ mevsimlik
 mevsimsel
 meyveci
 mezarcı
+meze
 mezeci
 mikroçip
 minibüsçü
@@ -853,8 +868,11 @@ niyetsiz
 nişancı
 nişanlı
 nöbetçi
+nötr
+obur
 odacı
 oduncu
+oje
 oksijenli
 oksijensiz
 okullu
@@ -898,7 +916,9 @@ pazarcı
 pazarlamacı
 pazarlıklı
 pazarlıksız
+pazı
 peynirci
+peşrev
 pideci
 piknikçi
 pizzacı
@@ -913,6 +933,7 @@ programcı
 programlı
 programsız
 projeci
+promosyon
 proteinli
 proteinsiz
 puslu
@@ -923,8 +944,11 @@ radyocu
 rahatlık
 rahatsız
 rahatsızlık
+rakun
 raporlu
 raporsuz
+reel
+reji
 reklamcı
 ressamlık
 reçelci
@@ -939,6 +963,7 @@ rütbeli
 sabuncu
 sabırlı
 sabırsız
+safha
 sakallı
 sakalsız
 salatalı
@@ -1086,6 +1111,7 @@ zırhlı
 üyelik
 ılımlı
 ırkçı
+ısın
 şanslı
 şanssız
 şarkıcı
@@ -1095,3 +1121,4 @@ zırhlı
 şerefli
 şüpheci
 şüpheli
+şıra

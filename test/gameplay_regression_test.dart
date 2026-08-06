@@ -444,6 +444,97 @@ void main() {
     controller.dispose();
   });
 
+  test('App Store v14 reklamda tamamlanan tahta migration öncesi kurtarılır', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final storage = StorageService();
+
+    // App Store v14'te 100-999 arası bölümlerde 6 zorunlu hedef vardı.
+    // Reklam sırasında kill olursa altı hedef kaydedilmiş fakat level_number
+    // ilerlememiş olabiliyordu.
+    await storage.setInt('content_version', 14);
+    await storage.setInt('level_number', 101);
+    await storage.setInt('levels_completed', 100);
+    await storage.setInt('coins', 120);
+    await storage.setInt('active_level_number', 101);
+    await storage.setStringList(
+      'found_words',
+      const <String>['a', 'b', 'c', 'd', 'e', 'f'],
+    );
+    await storage.setStringList('bonus_words', const <String>[]);
+    await storage.setBool('hint_used_level', true);
+    await storage.setString('hints_json', '{}');
+
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: storage,
+      ads: AdService(),
+      purchases: _TestPurchaseService(),
+      audio: AudioService(enabled: false),
+      account: AccountService(firebaseReady: false),
+    );
+    await controller.initialize();
+
+    expect(await storage.getInt('content_version', -1), 15);
+    expect(controller.levelNumber, 102);
+    expect(controller.levelsCompleted, 101);
+    expect(controller.coins, 125);
+    expect(controller.foundWords, isEmpty);
+    expect(await storage.getInt('active_level_number', -1), 102);
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
+  test('App Store v14 açık tahta v15 kampanyaya güvenli taşınır', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final storage = StorageService();
+
+    await storage.setInt('content_version', 14);
+    await storage.setInt('level_number', 321);
+    await storage.setInt('levels_completed', 320);
+    await storage.setInt('coins', 777);
+    await storage.setInt('hearts', 4);
+    await storage.setInt('active_level_number', 321);
+    await storage.setStringList('found_words', const <String>['eski']);
+    await storage.setStringList('bonus_words', const <String>['tahta']);
+    await storage.setBool('hint_used_level', true);
+    await storage.setInt('mistakes_this_level', 3);
+    await storage.setString('hints_json', '{"eski":[0]}');
+
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: storage,
+      ads: AdService(),
+      purchases: _TestPurchaseService(),
+      audio: AudioService(enabled: false),
+      account: AccountService(firebaseReady: false),
+    );
+    await controller.initialize();
+
+    expect(await storage.getInt('content_version', -1), 15);
+    expect(controller.levelNumber, 321);
+    expect(controller.levelsCompleted, 320);
+    expect(controller.coins, 777);
+    expect(controller.hearts, 4);
+    expect(controller.foundWords, isEmpty);
+    expect(controller.bonusWords, isEmpty);
+    expect(controller.hints, isEmpty);
+    expect(controller.hintUsedThisLevel, isFalse);
+    expect(controller.mistakesThisLevel, 0);
+    expect(await storage.getInt('active_level_number', -1), 321);
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
   test('reklamda kapanmış eski tam tahta açılışta otomatik ilerler', () async {
     final dictionary = DictionaryService();
     await dictionary.load();
@@ -452,7 +543,7 @@ void main() {
 
     // Eski hatanın bıraktığı durum: son kelime dahil tüm hedefler diskte,
     // fakat reklam sırasında uygulama kapanmış ve level_number ilerlememiş.
-    await storage.setInt('content_version', 12);
+    await storage.setInt('content_version', 15);
     await storage.setInt('level_number', 1);
     await storage.setInt('levels_completed', 0);
     await storage.setInt('coins', 120);

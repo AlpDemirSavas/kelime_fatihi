@@ -150,6 +150,93 @@ void main() {
     }
   });
 
+  test('App Store reviewed kelimeleri yeni sözlükte kaybolmaz', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    for (final word in <String>[
+      'akan',
+      'alma',
+      'alman',
+      'anaç',
+      'anka',
+      'anlaş',
+      'arşın',
+      'bana',
+      'baya',
+      'besi',
+      'beyit',
+      'emel',
+      'fevri',
+      'jel',
+      'kalan',
+      'karaca',
+      'meze',
+      'nötr',
+      'obur',
+      'oje',
+      'pazı',
+      'peşrev',
+      'promosyon',
+      'rakun',
+      'reel',
+      'reji',
+      'safha',
+      'ısın',
+      'şıra',
+    ]) {
+      expect(
+        dictionary.contains(word),
+        isTrue,
+        reason: '$word App Store reviewed sözlüğünden kaybolmamalı',
+      );
+    }
+  });
+
+  test('App Store global uygunsuzluk denylisti geri dönmez', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    for (final word in <String>[
+      'abazan',
+      'boktan',
+      'fahişe',
+      'gerdek',
+      'götün',
+      'kahpe',
+      'kaltak',
+      'orgazm',
+      'penis',
+      'porno',
+      'sakso',
+      'seks',
+      'seksi',
+      'seksüel',
+      'sürtük',
+      'taşak',
+      'testis',
+      'vajina',
+      'yarak',
+      'yavşak',
+      'çük',
+      'şıllık',
+    ]) {
+      expect(
+        dictionary.contains(word),
+        isFalse,
+        reason: '$word App Store global denylistinde kalmalı',
+      );
+    }
+  });
+
+  test('App Store Günün Kelimesi sırası korunur', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    expect(dictionary.dailyWord(DateTime(2026, 1, 1)), 'kalem');
+    expect(dictionary.dailyWord(DateTime(2026, 8, 6)), 'yazar');
+  });
+
   test('şehirler ve fetih haritası adları özel ad olarak can götürmez', () async {
     final dictionary = DictionaryService();
     await dictionary.load();

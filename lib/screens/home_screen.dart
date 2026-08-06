@@ -46,19 +46,44 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'KELİME',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      color: GameTheme.cyan,
-                                      letterSpacing: 6,
-                                      fontWeight: FontWeight.w900,
-                                    ),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 22,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'KELİME',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: GameTheme.cyan,
+                                          letterSpacing: 6,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                  ),
+                                ),
                               ),
-                              Text(
-                                'FATİHİ',
-                                style: Theme.of(context).textTheme.displaySmall
-                                    ?.copyWith(fontSize: 42),
+                              const SizedBox(height: 2),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'FATİHİ',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displaySmall
+                                        ?.copyWith(fontSize: 42),
+                                  ),
+                                ),
                               ),
                             ],
                           ),

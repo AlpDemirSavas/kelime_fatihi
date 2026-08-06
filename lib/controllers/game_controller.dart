@@ -392,10 +392,111 @@ class GameController extends ChangeNotifier {
     return true;
   }
 
+  int _appStoreV14TargetCount(int level) {
+    if (level < 100) return 5;
+    if (level < 1000) return 6;
+    if (level < 3000) return 7;
+    if (level < 5500) return 8;
+    if (level < 8000) return 9;
+    return 10;
+  }
+
+  Future<void> _recoverAppStoreV14CompletedBoard() async {
+    if (levelNumber < 1 || levelNumber > 10000) return;
+
+    final activeLevel = await storage.getInt(
+      'active_level_number',
+      levelNumber,
+    );
+    if (activeLevel != levelNumber) return;
+
+    final storedFoundWords = await storage.getStringList('found_words');
+    final expectedTargetCount = _appStoreV14TargetCount(levelNumber);
+    if (storedFoundWords.toSet().length < expectedTargetCount) return;
+
+    final oldHintUsed = await storage.getBool('hint_used_level', false);
+    final completedLevelNumber = levelNumber;
+    final nextLevelsCompleted = levelsCompleted + 1;
+    final nextLevelNumber = levelNumber >= DictionaryService.maxLevel
+        ? DictionaryService.maxLevel + 1
+        : levelNumber + 1;
+    final milestone = _milestoneRewardFor(completedLevelNumber);
+    final chest = _chestRewardFor(nextLevelsCompleted);
+
+    var nextCoins = coins + 5;
+    var nextHearts = hearts;
+    var nextFreeHints = freeHints;
+    var nextCrownFragments = crownFragments;
+
+    if (milestone != null) {
+      nextCoins += milestone.coins;
+      nextHearts += milestone.hearts;
+      nextFreeHints += milestone.freeHints;
+      nextCrownFragments += milestone.crownFragments;
+    }
+    if (chest != null) {
+      switch (chest.type) {
+        case ChestRewardType.heart:
+          nextHearts += chest.amount;
+          break;
+        case ChestRewardType.coins:
+          nextCoins += chest.amount;
+          break;
+        case ChestRewardType.freeHint:
+          nextFreeHints += chest.amount;
+          break;
+        case ChestRewardType.crownFragment:
+          nextCrownFragments += chest.amount;
+          break;
+      }
+    }
+
+    var nextMissions = _missionSnapshotAfterProgress(
+      dailyMissions,
+      MissionType.levels,
+    );
+    if (!oldHintUsed) {
+      nextMissions = _missionSnapshotAfterProgress(
+        nextMissions,
+        MissionType.noHintLevel,
+      );
+    }
+
+    // App Store v14 did not have Kusursuz Fetih. Do not grant that newer
+    // reward retroactively; preserve the exact old completion economy.
+    final plan = _LevelCompletionPlan(
+      completedLevelNumber: completedLevelNumber,
+      nextLevelNumber: nextLevelNumber,
+      nextLevelsCompleted: nextLevelsCompleted,
+      nextCoins: nextCoins,
+      nextHearts: nextHearts,
+      nextFreeHints: nextFreeHints,
+      nextCrownFragments: nextCrownFragments,
+      nextPerfectConquests: perfectConquests,
+      wasPerfect: false,
+      missionDateKey: dailyDateKey,
+      missions: nextMissions,
+    );
+
+    await storage.setString(
+      _pendingLevelCompletionKey,
+      jsonEncode(plan.toJson()),
+    );
+    await _applyLevelCompletionPlan(plan, exposeRewards: false);
+    await storage.setString(_pendingLevelCompletionKey, '');
+  }
+
   Future<void> _migrateContentState() async {
-    const contentVersion = 12;
+    const contentVersion = 15;
     final storedVersion = await storage.getInt('content_version', 0);
     if (storedVersion >= contentVersion) return;
+
+    // The live App Store build is content v14. Recover its historical
+    // "all targets found but level not advanced" ad-interruption state before
+    // V15 clears the open-board data for the new 8,000-level mapping.
+    if (storedVersion == 14) {
+      await _recoverAppStoreV14CompletedBoard();
+    }
 
     if (storedVersion < 11) {
       // V11 remapped the 8,000-level campaign for the 20/30-level cooldown.
@@ -407,11 +508,24 @@ class GameController extends ChangeNotifier {
       await storage.setString('hints_json', '{}');
     }
 
-    // V12 adds engagement state without remapping levels. Existing V11 players
-    // keep the board they are currently solving.
+    // V12 added engagement state without remapping levels.
     if (storedVersion < 12) {
       await storage.setInt('mistakes_this_level', 0);
     }
+
+    if (storedVersion < 15) {
+      // The live App Store campaign reached content version 14. V15 moves
+      // every player onto the final 8,000-level App Store-superset campaign.
+      // Preserve permanent progress/economy, but never reuse found-word or
+      // hint state from a differently mapped open board.
+      await storage.setInt('active_level_number', -1);
+      await storage.setStringList('found_words', const <String>[]);
+      await storage.setStringList('bonus_words', const <String>[]);
+      await storage.setBool('hint_used_level', false);
+      await storage.setInt('mistakes_this_level', 0);
+      await storage.setString('hints_json', '{}');
+    }
+
     await storage.setInt('content_version', contentVersion);
   }
 

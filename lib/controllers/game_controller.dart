@@ -487,13 +487,13 @@ class GameController extends ChangeNotifier {
   }
 
   Future<void> _migrateContentState() async {
-    const contentVersion = 15;
+    const contentVersion = 16;
     final storedVersion = await storage.getInt('content_version', 0);
     if (storedVersion >= contentVersion) return;
 
     // The live App Store build is content v14. Recover its historical
     // "all targets found but level not advanced" ad-interruption state before
-    // V15 clears the open-board data for the new 8,000-level mapping.
+    // V15/V16 clear open-board data when campaign mappings change.
     if (storedVersion == 14) {
       await _recoverAppStoreV14CompletedBoard();
     }
@@ -514,10 +514,23 @@ class GameController extends ChangeNotifier {
     }
 
     if (storedVersion < 15) {
-      // The live App Store campaign reached content version 14. V15 moves
-      // every player onto the final 8,000-level App Store-superset campaign.
+      // The live App Store campaign reached content version 14. V15 moved
+      // every player onto the 8,000-level App Store-superset campaign.
       // Preserve permanent progress/economy, but never reuse found-word or
       // hint state from a differently mapped open board.
+      await storage.setInt('active_level_number', -1);
+      await storage.setStringList('found_words', const <String>[]);
+      await storage.setStringList('bonus_words', const <String>[]);
+      await storage.setBool('hint_used_level', false);
+      await storage.setInt('mistakes_this_level', 0);
+      await storage.setString('hints_json', '{}');
+    }
+
+    if (storedVersion < 16) {
+      // V16 keeps the 8,000-level structure but performs the final
+      // wheel/mandatory-word quality rebalance. Keep permanent progress and
+      // economy, but reset only the open-board state because its seed/targets
+      // may have changed.
       await storage.setInt('active_level_number', -1);
       await storage.setStringList('found_words', const <String>[]);
       await storage.setStringList('bonus_words', const <String>[]);

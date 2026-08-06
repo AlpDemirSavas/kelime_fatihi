@@ -449,7 +449,7 @@ yamuk
 delil
 tarak
 tozar
-mutlu
+şilte
 yalan
 kaşık
 parya
@@ -475,7 +475,7 @@ sakar
 tanıt
 kural
 lamba
-dolar
+atlas
 imkan
 ekran
 turne
@@ -564,7 +564,7 @@ füzeli
 yazlık
 balkon
 kapsam
-hediye
+marina
 imzacı
 şenlik
 kaybol
@@ -1421,7 +1421,7 @@ tırpan
 aşikar
 elbise
 asılan
-bandaj
+yakala
 sayılı
 manken
 albeni
@@ -1575,7 +1575,7 @@ format
 sistem
 garaip
 tahsis
-memeli
+salata
 harabi
 ikamet
 lombar
@@ -2407,7 +2407,7 @@ geçinim
 mobilet
 demirci
 yediler
-umutsuz
+tematik
 anarşik
 küresel
 kaçakçı
@@ -3436,7 +3436,7 @@ stratej
 jelatin
 ihracat
 adaptif
-çerezci
+zamanla
 şaheser
 tuzakla
 prenses
@@ -4812,7 +4812,7 @@ ettoprak
 çetrefil
 mandater
 kurumlan
-mermerci
+alabalık
 tekniker
 münkariz
 tereyağı

@@ -125,6 +125,91 @@ void main() {
     }
   });
 
+
+  test('App Store sürümündeki güvenli bonus kelimeler korunur', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    for (final word in <String>[
+      'alman',
+      'anka',
+      'ataç',
+      'çinli',
+      'koreli',
+      'laz',
+      'rus',
+      'sota',
+      'türk',
+      'yunan',
+    ]) {
+      expect(
+        dictionary.contains(word),
+        isTrue,
+        reason: '$word App Store davranışıyla bonus kabul edilmeli',
+      );
+    }
+  });
+
+  test('şehirler ve fetih haritası adları özel ad olarak can götürmez', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    for (final word in <String>[
+      'van',
+      'ankara',
+      'izmir',
+      'mila',
+      'almila',
+      'nare',
+      'akan',
+      'erdi',
+      'roma',
+      'söğüt',
+      'semerkant',
+    ]) {
+      expect(
+        dictionary.isProperName(word),
+        isTrue,
+        reason: '$word özel ad olarak can götürmemeli',
+      );
+    }
+
+    for (var index = 0; index < ConquestRegion.regionCount; index++) {
+      final region = ConquestRegion.forLevel(
+        index * ConquestRegion.regionSize + 1,
+      );
+      expect(
+        dictionary.isProperName(region.name),
+        isTrue,
+        reason: '${region.name} harita adı bonus/özel ad olarak tanınmalı',
+      );
+    }
+  });
+
+  test('Günün Kelimesi hassas hedef filtresini de uygular', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+
+    final blockedLevelRaw = await rootBundle.loadString(
+      'assets/dictionary/blocked_level_words.txt',
+    );
+    final blockedDaily = blockedLevelRaw
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.split('#').first.trim())
+        .where((line) => line.isNotEmpty)
+        .toSet();
+
+    final start = DateTime(2026, 1, 1);
+    for (var day = 0; day < 400; day++) {
+      final word = dictionary.dailyWord(start.add(Duration(days: day)));
+      expect(
+        blockedDaily.contains(word),
+        isFalse,
+        reason: 'Günün Kelimesi hassas hedef içeriyor: $word',
+      );
+    }
+  });
+
   test('global denylist runtime katmanında da kesin uygulanır', () async {
     final dictionary = DictionaryService();
     await dictionary.load();

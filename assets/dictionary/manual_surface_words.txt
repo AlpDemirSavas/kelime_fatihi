@@ -5,3 +5,15 @@
 admin
 mesir
 sana
+
+# App Store sürümünden korunan güvenli bonus-only kelimeler
+alman
+anka
+ataç
+çinli
+koreli
+laz
+rus
+sota
+türk
+yunan

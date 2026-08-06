@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -18,9 +20,14 @@ class DismissibleBannerAd extends StatefulWidget {
 }
 
 class _DismissibleBannerAdState extends State<DismissibleBannerAd> {
+  static const int _maxLoadAttempts = 2;
+  static const Duration _retryDelay = Duration(seconds: 45);
+
   BannerAd? _banner;
+  Timer? _retryTimer;
   bool _loading = false;
   bool _dismissed = false;
+  int _loadAttempts = 0;
 
   @override
   void initState() {
@@ -33,12 +40,16 @@ class _DismissibleBannerAdState extends State<DismissibleBannerAd> {
     super.didUpdateWidget(oldWidget);
 
     if (!oldWidget.isAdFree && widget.isAdFree) {
+      _cancelRetry();
       _disposeBanner();
       return;
     }
 
     if (oldWidget.ads != widget.ads) {
+      _cancelRetry();
       _disposeBanner();
+      _dismissed = false;
+      _loadAttempts = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) => _load());
     }
   }
@@ -48,11 +59,14 @@ class _DismissibleBannerAdState extends State<DismissibleBannerAd> {
         _loading ||
         _dismissed ||
         widget.isAdFree ||
+        _banner != null ||
+        _loadAttempts >= _maxLoadAttempts ||
         widget.ads.bannerDismissedForSession) {
       return;
     }
 
     _loading = true;
+    _loadAttempts++;
     BannerAd? banner;
     try {
       banner = await widget.ads.loadBanner();
@@ -72,15 +86,37 @@ class _DismissibleBannerAdState extends State<DismissibleBannerAd> {
     }
 
     if (banner != null) {
+      _cancelRetry();
       setState(() => _banner = banner);
+      return;
+    }
+
+    // İlk istekte no-fill/ağ hatası olursa yalnız bir kez gecikmeli tekrar dene.
+    // Kullanıcı bannerı kapattıysa oturum boyunca yeniden istek yapılmaz.
+    if (_loadAttempts < _maxLoadAttempts &&
+        !widget.ads.bannerDismissedForSession) {
+      _retryTimer = Timer(_retryDelay, () {
+        if (mounted &&
+            !_dismissed &&
+            !widget.isAdFree &&
+            !widget.ads.bannerDismissedForSession) {
+          _load();
+        }
+      });
     }
   }
 
   void _dismiss() {
+    _cancelRetry();
     widget.ads.dismissBannerForSession();
     _dismissed = true;
     _disposeBanner();
     if (mounted) setState(() {});
+  }
+
+  void _cancelRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
   }
 
   void _disposeBanner() {
@@ -90,6 +126,7 @@ class _DismissibleBannerAdState extends State<DismissibleBannerAd> {
 
   @override
   void dispose() {
+    _cancelRetry();
     _disposeBanner();
     super.dispose();
   }

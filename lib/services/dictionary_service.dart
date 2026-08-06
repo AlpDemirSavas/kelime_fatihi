@@ -51,7 +51,12 @@ class DictionaryService {
   final Set<String> _words = <String>{};
   final List<String> _dailyWords = <String>[];
   final Set<String> _levelWords = <String>{};
-  final Set<String> _properNames = commonProperNames;
+  final Set<String> _properNames = <String>{
+    ...commonProperNames,
+    ...legacyApprovedProperNames,
+    ...turkishProvinceNames,
+    ...conquestGeographicProperNames,
+  };
   final List<String> _seedWords = <String>[];
   final List<List<String>> _levelTargets = <List<String>>[];
   final Map<String, List<String>> _levelWordsBySignature =
@@ -94,7 +99,10 @@ class DictionaryService {
       ..clear()
       ..addAll(
         parsed[1].where(
-          (word) => word.length == 5 && !blockedWords.contains(word),
+          (word) =>
+              word.length == 5 &&
+              !blockedWords.contains(word) &&
+              !blockedLevelWords.contains(word),
         ),
       );
 

@@ -301,9 +301,58 @@ class AccountService extends ChangeNotifier {
     }
   }
 
+  Future<Set<String>> loadBlockedUserIds() async {
+    final current = user;
+    if (current == null) return const <String>{};
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('blocked_users')
+          .doc(current.uid)
+          .collection('members')
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 5));
+      return snapshot.docs.map((doc) => doc.id).toSet();
+    } catch (_) {
+      return const <String>{};
+    }
+  }
+
+  Future<List<BlockedPlayer>> loadBlockedPlayers() async {
+    final current = user;
+    if (current == null) return const <BlockedPlayer>[];
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('blocked_users')
+          .doc(current.uid)
+          .collection('members')
+          .orderBy('createdAt', descending: true)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 5));
+      return snapshot.docs
+          .map((doc) => BlockedPlayer.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (_) {
+      // createdAt için index gerekmemesi adına ikinci, sırasız okuma yolu.
+      try {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('blocked_users')
+            .doc(current.uid)
+            .collection('members')
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 5));
+        return snapshot.docs
+            .map((doc) => BlockedPlayer.fromMap(doc.id, doc.data()))
+            .toList();
+      } catch (_) {
+        return const <BlockedPlayer>[];
+      }
+    }
+  }
+
   Future<List<LeaderboardEntry>> loadWeeklyLeaderboard(String weekKey) async {
     if (!signedIn) return const <LeaderboardEntry>[];
     try {
+      final blocked = await loadBlockedUserIds();
       final snapshot = await FirebaseFirestore.instance
           .collection('social_profiles')
           .where('weekKey', isEqualTo: weekKey)
@@ -312,6 +361,7 @@ class AccountService extends ChangeNotifier {
           .get(const GetOptions(source: Source.serverAndCache))
           .timeout(const Duration(seconds: 6));
       return snapshot.docs
+          .where((doc) => !blocked.contains(doc.id))
           .map((doc) => LeaderboardEntry.fromMap(doc.id, doc.data()))
           .toList();
     } catch (_) {
@@ -324,6 +374,7 @@ class AccountService extends ChangeNotifier {
   ) async {
     if (!signedIn) return const <LeaderboardEntry>[];
     try {
+      final blocked = await loadBlockedUserIds();
       final snapshot = await FirebaseFirestore.instance
           .collection('social_profiles')
           .where('seasonKey', isEqualTo: seasonKey)
@@ -332,6 +383,7 @@ class AccountService extends ChangeNotifier {
           .get(const GetOptions(source: Source.serverAndCache))
           .timeout(const Duration(seconds: 6));
       return snapshot.docs
+          .where((doc) => !blocked.contains(doc.id))
           .map((doc) => LeaderboardEntry.fromMap(doc.id, doc.data()))
           .toList();
     } catch (_) {
@@ -343,6 +395,7 @@ class AccountService extends ChangeNotifier {
     final current = user;
     if (current == null) return const <LeaderboardEntry>[];
     try {
+      final blocked = await loadBlockedUserIds();
       final friends = await FirebaseFirestore.instance
           .collection('friendships')
           .doc(current.uid)
@@ -351,7 +404,12 @@ class AccountService extends ChangeNotifier {
           .get(const GetOptions(source: Source.serverAndCache))
           .timeout(const Duration(seconds: 6));
 
-      final ids = <String>{current.uid, ...friends.docs.map((doc) => doc.id)};
+      final ids = <String>{
+        current.uid,
+        ...friends.docs
+            .map((doc) => doc.id)
+            .where((uid) => !blocked.contains(uid)),
+      };
       final entries = await Future.wait(
         ids.map((uid) async {
           try {
@@ -378,6 +436,98 @@ class AccountService extends ChangeNotifier {
     }
   }
 
+  Future<String?> reportUser({
+    required String reportedUid,
+    required String reportedDisplayName,
+    required ModerationReportReason reason,
+  }) async {
+    final current = user;
+    if (current == null) {
+      return 'Şikâyet göndermek için hesabınla giriş yapmalısın.';
+    }
+    if (reportedUid.isEmpty || reportedUid == current.uid) {
+      return 'Bu oyuncu şikâyet edilemez.';
+    }
+
+    final reportRef = FirebaseFirestore.instance
+        .collection('user_reports')
+        .doc(current.uid)
+        .collection('reported')
+        .doc(reportedUid);
+    try {
+      final existing = await reportRef
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 4));
+      if (existing.exists) {
+        return 'Bu oyuncuyu daha önce şikâyet ettin.';
+      }
+      await reportRef.set(<String, dynamic>{
+        'reporterUid': current.uid,
+        'reportedUid': reportedUid,
+        'reportedDisplayName': reportedDisplayName.trim(),
+        'reason': reason.key,
+        'createdAt': FieldValue.serverTimestamp(),
+      }).timeout(const Duration(seconds: 5));
+      return null;
+    } catch (_) {
+      return 'Şikâyet gönderilemedi. İnternet bağlantını kontrol edip tekrar dene.';
+    }
+  }
+
+  Future<String?> blockUser({
+    required String blockedUid,
+    required String blockedDisplayName,
+  }) async {
+    final current = user;
+    if (current == null) {
+      return 'Oyuncu engellemek için hesabınla giriş yapmalısın.';
+    }
+    if (blockedUid.isEmpty || blockedUid == current.uid) {
+      return 'Bu oyuncu engellenemez.';
+    }
+
+    try {
+      final db = FirebaseFirestore.instance;
+      final batch = db.batch();
+      final blockRef = db
+          .collection('blocked_users')
+          .doc(current.uid)
+          .collection('members')
+          .doc(blockedUid);
+      batch.set(blockRef, <String, dynamic>{
+        'blockedUid': blockedUid,
+        'displayName': blockedDisplayName.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      // Engellenen oyuncu kendi arkadaş listemizden de çıkarılır.
+      batch.delete(
+        db
+            .collection('friendships')
+            .doc(current.uid)
+            .collection('members')
+            .doc(blockedUid),
+      );
+      await batch.commit().timeout(const Duration(seconds: 5));
+      return null;
+    } catch (_) {
+      return 'Oyuncu engellenemedi. İnternet bağlantını kontrol edip tekrar dene.';
+    }
+  }
+
+  Future<void> unblockUser(String blockedUid) async {
+    final current = user;
+    if (current == null || blockedUid.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('blocked_users')
+          .doc(current.uid)
+          .collection('members')
+          .doc(blockedUid)
+          .delete()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
   Future<String?> addFriendByCode(String rawCode) async {
     final current = user;
     if (current == null) return 'Arkadaş eklemek için hesabınla giriş yapmalısın.';
@@ -385,7 +535,8 @@ class AccountService extends ChangeNotifier {
     if (code.isEmpty) return 'Arkadaş kodunu yaz.';
 
     try {
-      final codeDoc = await FirebaseFirestore.instance
+      final db = FirebaseFirestore.instance;
+      final codeDoc = await db
           .collection('friend_codes')
           .doc(code)
           .get(const GetOptions(source: Source.serverAndCache))
@@ -396,14 +547,25 @@ class AccountService extends ChangeNotifier {
       }
       if (friendUid == current.uid) return 'Kendi arkadaş kodunu ekleyemezsin.';
 
-      final profile = await FirebaseFirestore.instance
+      final block = await db
+          .collection('blocked_users')
+          .doc(current.uid)
+          .collection('members')
+          .doc(friendUid)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 4));
+      if (block.exists) {
+        return 'Bu oyuncu engellenmiş. Önce engeli kaldırmalısın.';
+      }
+
+      final profile = await db
           .collection('social_profiles')
           .doc(friendUid)
           .get(const GetOptions(source: Source.serverAndCache))
           .timeout(const Duration(seconds: 5));
       if (!profile.exists) return 'Bu oyuncu sosyal sıralamaya katılmamış.';
 
-      await FirebaseFirestore.instance
+      await db
           .collection('friendships')
           .doc(current.uid)
           .collection('members')
@@ -612,6 +774,45 @@ class AccountService extends ChangeNotifier {
       if (deleteUsername && normalized != null && normalized.isNotEmpty) {
         batch.delete(db.collection('usernames').doc(normalized));
         batch.delete(ownerRef);
+      }
+      await batch.commit().timeout(const Duration(seconds: 6));
+      if (deleteUsername) {
+        final moderationDeleted = await _deleteOwnModerationData(uid);
+        if (!moderationDeleted) return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _deleteOwnModerationData(String uid) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      final results = await Future.wait([
+        db
+            .collection('blocked_users')
+            .doc(uid)
+            .collection('members')
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 5)),
+        db
+            .collection('user_reports')
+            .doc(uid)
+            .collection('reported')
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 5)),
+      ]);
+      final blocked = results[0] as QuerySnapshot<Map<String, dynamic>>;
+      final reports = results[1] as QuerySnapshot<Map<String, dynamic>>;
+      if (blocked.docs.isEmpty && reports.docs.isEmpty) return true;
+
+      final batch = db.batch();
+      for (final doc in blocked.docs) {
+        batch.delete(doc.reference);
+      }
+      for (final doc in reports.docs) {
+        batch.delete(doc.reference);
       }
       await batch.commit().timeout(const Duration(seconds: 6));
       return true;

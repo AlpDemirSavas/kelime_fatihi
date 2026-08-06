@@ -4,7 +4,7 @@ Public privacy URL:
 
 https://kelime-fatihi-cd8ca.web.app/privacy
 
-V17 ile Fatihler Ligi, haftalık/sezon sıralaması, arkadaş kodu ve tek seferlik benzersiz “Fatih adı” özelliği eklendiği için gizlilik metni de güncellendi. Sosyal lige katılım isteğe bağlıdır; Google/Apple hesap adı ve e-posta leaderboard’da yayınlanmaz. Fatih adı hesap silinene kadar benzersiz olarak rezerve edilir.
+V17 ile Fatihler Ligi, haftalık/sezon sıralaması, arkadaş kodu ve tek seferlik benzersiz “Fatih adı” özelliği eklendiği için gizlilik metni de güncellendi. Sosyal lige katılım isteğe bağlıdır; Google/Apple hesap adı ve e-posta leaderboard’da yayınlanmaz. Fatih adı hesap silinene kadar benzersiz olarak rezerve edilir. Public Fatih adları için ayrıca Şikâyet Et / Kullanıcıyı Engelle moderasyonu vardır; şikâyetlerde serbest metin alınmaz.
 
 ## V17 release öncesi Firebase deploy
 
@@ -25,9 +25,11 @@ firebase deploy --only firestore:rules,firestore:indexes,hosting --project kelim
 
 Bu deploy şu V17 parçaları için gereklidir:
 
-- `firestore.rules`: benzersiz Fatih adı rezervasyonu, sosyal profil, arkadaş kodu ve arkadaş listesi erişim kuralları
+- `firestore.rules`: benzersiz Fatih adı rezervasyonu, sosyal profil, arkadaş kodu, arkadaş listesi, engelleme ve şikâyet erişim kuralları
 - `firestore.indexes.json`: haftalık ve sezon leaderboard sorgu indeksleri
 - `usernames/{normalized}` + `username_owners/{uid}`: tek seferlik benzersiz Fatih adı rezervasyonu; e-posta içermez
+- `blocked_users/{uid}/members/{blockedUid}`: yalnız hesap sahibinin görebildiği engel listesi
+- `user_reports/{uid}/reported/{reportedUid}`: sabit nedenli moderasyon şikâyetleri; e-posta ve serbest metin içermez
 - `hosting/privacy.html`: güncel gizlilik politikası
 
 Deploy tamamlandıktan sonra gizlilik sayfasını tarayıcıda kontrol et:

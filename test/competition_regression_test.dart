@@ -64,4 +64,15 @@ void main() {
     // yanlış pozitif üretmez.
     expect(UsernameRules.validate('Musiki'), isNull);
   });
+
+  test('moderasyon rapor nedenleri sabit backend anahtarlarına sahiptir', () {
+    expect(
+      ModerationReportReason.inappropriateUsername.key,
+      'inappropriate_username',
+    );
+    expect(ModerationReportReason.impersonation.key, 'impersonation');
+    expect(ModerationReportReason.other.key, 'other');
+    expect(ModerationReportReason.values.length, 3);
+  });
+
 }

@@ -31,6 +31,43 @@ service cloud.firestore {
         && reservation.normalized == owner.normalized;
     }
 
+    function validBlock(uid, blockedUid) {
+      return blockedUid != uid
+        && exists(/databases/$(database)/documents/social_profiles/$(blockedUid))
+        && request.resource.data.keys().hasOnly([
+          'blockedUid',
+          'displayName',
+          'createdAt'
+        ])
+        && request.resource.data.blockedUid == blockedUid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 28
+        && request.resource.data.createdAt is timestamp;
+    }
+
+    function validReport(uid, reportedUid) {
+      return reportedUid != uid
+        && exists(/databases/$(database)/documents/social_profiles/$(reportedUid))
+        && request.resource.data.keys().hasOnly([
+          'reporterUid',
+          'reportedUid',
+          'reportedDisplayName',
+          'reason',
+          'createdAt'
+        ])
+        && request.resource.data.reporterUid == uid
+        && request.resource.data.reportedUid == reportedUid
+        && request.resource.data.reportedDisplayName is string
+        && request.resource.data.reportedDisplayName.size() <= 28
+        && request.resource.data.reason is string
+        && request.resource.data.reason in [
+          'inappropriate_username',
+          'impersonation',
+          'other'
+        ]
+        && request.resource.data.createdAt is timestamp;
+    }
+
     function validSocialProfile(uid) {
       return request.resource.data.uid == uid
         && request.resource.data.displayName is string
@@ -117,6 +154,21 @@ service cloud.firestore {
         && resource.data.uid == request.auth.uid
         && request.resource.data.uid == request.auth.uid;
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Engelleme listesi yalnız hesabın sahibine görünür. Engellenen oyuncu
+    // sıralama ve arkadaş görünümünden istemci tarafında filtrelenir.
+    match /blocked_users/{uid}/members/{blockedUid} {
+      allow read, delete: if owns(uid);
+      allow create, update: if owns(uid) && validBlock(uid, blockedUid);
+    }
+
+    // Şikâyetler yalnız şikâyeti gönderen hesap tarafından okunabilir/silinebilir.
+    // Update kapalıdır: gönderilmiş bir rapor sonradan içerik değiştiremez.
+    match /user_reports/{uid}/reported/{reportedUid} {
+      allow read, delete: if owns(uid);
+      allow create: if owns(uid) && validReport(uid, reportedUid);
+      allow update: if false;
     }
 
     match /friendships/{uid}/members/{friendUid} {

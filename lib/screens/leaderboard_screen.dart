@@ -9,6 +9,8 @@ import '../widgets/game_scope.dart';
 import '../widgets/glass_card.dart';
 import 'account_screen.dart';
 
+enum _PlayerAction { report, block, removeFriend }
+
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -61,6 +63,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         backgroundColor: Colors.transparent,
         title: const Text('Fatihler Ligi'),
         actions: [
+          if (game.signedIn && game.socialEnabled)
+            IconButton(
+              tooltip: 'Engellenen oyuncular',
+              onPressed: () => _showBlockedPlayers(game),
+              icon: const Icon(Icons.shield_outlined),
+            ),
           if (game.signedIn && game.socialEnabled)
             IconButton(
               tooltip: 'Yenile',
@@ -135,6 +143,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     scoreOf: (entry) => entry.weeklyScore,
                                     emptyText:
                                         'Bu haftanın sıralaması henüz oluşmadı.',
+                                    onReport: (entry) =>
+                                        _showReportDialog(game, entry),
+                                    onBlock: (entry) =>
+                                        _confirmBlock(game, entry),
                                   ),
                                   _RankingList(
                                     entries: _season,
@@ -143,6 +155,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     showLeague: true,
                                     emptyText:
                                         'Bu sezonun sıralaması henüz oluşmadı.',
+                                    onReport: (entry) =>
+                                        _showReportDialog(game, entry),
+                                    onBlock: (entry) =>
+                                        _confirmBlock(game, entry),
                                   ),
                                   _RankingList(
                                     entries: _friends,
@@ -150,6 +166,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     scoreOf: (entry) => entry.weeklyScore,
                                     emptyText:
                                         'Arkadaş koduyla oyuncu ekleyip haftalık skorlarınızı karşılaştır.',
+                                    onReport: (entry) =>
+                                        _showReportDialog(game, entry),
+                                    onBlock: (entry) =>
+                                        _confirmBlock(game, entry),
                                     onRemove: (uid) async {
                                       await game.removeFriend(uid);
                                       await _refresh();
@@ -305,6 +325,133 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
     controller.dispose();
     return joined == true;
+  }
+
+  Future<void> _showReportDialog(
+    GameController game,
+    LeaderboardEntry entry,
+  ) async {
+    final reason = await showDialog<ModerationReportReason>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text('${entry.displayName} kullanıcısını şikâyet et'),
+        children: [
+          for (final item in ModerationReportReason.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, item),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(item.title),
+              ),
+            ),
+          const Divider(),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('VAZGEÇ'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null) return;
+
+    final error = await game.reportPlayer(entry, reason);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error ?? 'Şikâyetin alındı. Teşekkürler.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmBlock(
+    GameController game,
+    LeaderboardEntry entry,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Kullanıcıyı Engelle'),
+        content: Text(
+          '${entry.displayName} sıralamalardan ve arkadaş görünümünden gizlenecek. '
+          'İstersen daha sonra kalkan simgesinden engeli kaldırabilirsin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('VAZGEÇ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('ENGELLE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final error = await game.blockPlayer(entry);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error ?? '${entry.displayName} engellendi.'),
+      ),
+    );
+    if (error == null) await _refresh();
+  }
+
+  Future<void> _showBlockedPlayers(GameController game) async {
+    final blocked = await game.loadBlockedPlayers();
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Engellenen Oyuncular'),
+        content: SizedBox(
+          width: 420,
+          child: blocked.isEmpty
+              ? const Text('Engellediğin oyuncu yok.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: blocked.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final player = blocked[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.block_rounded),
+                      title: Text(player.displayName),
+                      trailing: TextButton(
+                        onPressed: () async {
+                          await game.unblockPlayer(player.uid);
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${player.displayName} için engel kaldırıldı.',
+                              ),
+                            ),
+                          );
+                          await _refresh();
+                        },
+                        child: const Text('ENGELİ KALDIR'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('KAPAT'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _copyCode(String code) async {
@@ -554,6 +701,8 @@ class _RankingList extends StatelessWidget {
     required this.scoreOf,
     required this.emptyText,
     this.showLeague = false,
+    this.onReport,
+    this.onBlock,
     this.onRemove,
   });
 
@@ -562,6 +711,8 @@ class _RankingList extends StatelessWidget {
   final int Function(LeaderboardEntry entry) scoreOf;
   final String emptyText;
   final bool showLeague;
+  final Future<void> Function(LeaderboardEntry entry)? onReport;
+  final Future<void> Function(LeaderboardEntry entry)? onBlock;
   final Future<void> Function(String uid)? onRemove;
 
   @override
@@ -587,7 +738,12 @@ class _RankingList extends StatelessWidget {
         final entry = entries[index];
         final mine = entry.uid == currentUid;
         final rank = index + 1;
-        final medal = switch (rank) { 1 => '🥇', 2 => '🥈', 3 => '🥉', _ => '#$rank' };
+        final medal = switch (rank) {
+          1 => '🥇',
+          2 => '🥈',
+          3 => '🥉',
+          _ => '#$rank',
+        };
         final tier = LeagueTier.forScore(entry.seasonScore);
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
@@ -647,13 +803,53 @@ class _RankingList extends StatelessWidget {
                   fontSize: 16,
                 ),
               ),
-              if (onRemove != null && !mine) ...[
-                const SizedBox(width: 4),
-                IconButton(
-                  tooltip: 'Arkadaşı kaldır',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => onRemove!(entry.uid),
-                  icon: const Icon(Icons.close_rounded, size: 18),
+              if (!mine && (onReport != null || onBlock != null || onRemove != null)) ...[
+                const SizedBox(width: 2),
+                PopupMenuButton<_PlayerAction>(
+                  tooltip: 'Oyuncu seçenekleri',
+                  icon: const Icon(Icons.more_vert_rounded, size: 20),
+                  onSelected: (action) async {
+                    switch (action) {
+                      case _PlayerAction.report:
+                        await onReport?.call(entry);
+                        break;
+                      case _PlayerAction.block:
+                        await onBlock?.call(entry);
+                        break;
+                      case _PlayerAction.removeFriend:
+                        await onRemove?.call(entry.uid);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (onReport != null)
+                      const PopupMenuItem(
+                        value: _PlayerAction.report,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.flag_outlined),
+                          title: Text('Şikâyet Et'),
+                        ),
+                      ),
+                    if (onBlock != null)
+                      const PopupMenuItem(
+                        value: _PlayerAction.block,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.block_rounded),
+                          title: Text('Kullanıcıyı Engelle'),
+                        ),
+                      ),
+                    if (onRemove != null)
+                      const PopupMenuItem(
+                        value: _PlayerAction.removeFriend,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.person_remove_alt_1_outlined),
+                          title: Text('Arkadaşlıktan Çıkar'),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ],

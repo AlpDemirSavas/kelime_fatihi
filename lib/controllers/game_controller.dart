@@ -1756,6 +1756,25 @@ class GameController extends ChangeNotifier {
 
   Future<void> removeFriend(String uid) => account.removeFriend(uid);
 
+  Future<String?> reportPlayer(
+    LeaderboardEntry entry,
+    ModerationReportReason reason,
+  ) => account.reportUser(
+    reportedUid: entry.uid,
+    reportedDisplayName: entry.displayName,
+    reason: reason,
+  );
+
+  Future<String?> blockPlayer(LeaderboardEntry entry) => account.blockUser(
+    blockedUid: entry.uid,
+    blockedDisplayName: entry.displayName,
+  );
+
+  Future<List<BlockedPlayer>> loadBlockedPlayers() =>
+      account.loadBlockedPlayers();
+
+  Future<void> unblockPlayer(String uid) => account.unblockUser(uid);
+
   Future<void> _awardDailyCompetition() async {
     await _ensureCompetitionPeriods();
     final lastDate = await storage.getString('competition_daily_scored_date');

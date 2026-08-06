@@ -33,6 +33,11 @@ class PrivacyScreen extends StatelessWidget {
                     'Fatihler Ligi tamamen isteğe bağlıdır. İlk katılımda kullanıcı bir kez benzersiz Fatih adı seçer; liderlik tablosunda Google/Apple hesap adı veya e-posta yerine bu ad gösterilir. Arkadaş kodu, haftalık/sezon puanı, bölüm seviyesi ve Kusursuz Fetih sayısı diğer giriş yapmış oyunculara gösterilebilir. Ligden ayrılınca sosyal profil ve arkadaş listesi silinir; Fatih adı yeniden katılımda tekrar sorulmaması ve başkası tarafından alınmaması için hesap silinene kadar rezerve kalır.',
               ),
               const _PolicySection(
+                title: 'Şikâyet ve engelleme',
+                body:
+                    'Liderlik tablosundaki public Fatih adları için Şikâyet Et ve Kullanıcıyı Engelle seçenekleri bulunur. Şikâyet kaydında şikâyet eden ve edilen hesap kimlikleri, görünen Fatih adı, seçilen sabit şikâyet nedeni ve zaman bilgisi Firestore üzerinde işlenebilir. Serbest metin mesajı alınmaz. Engellenen kullanıcılar kendi sıralama ve arkadaş görünümünden gizlenir; engel daha sonra kaldırılabilir. Şikâyet kayıtları güvenlik ve kötüye kullanım incelemesi amacıyla gerekli süre boyunca saklanabilir.',
+              ),
+              const _PolicySection(
                 title: 'Yerel oyun verileri',
                 body:
                     'Bölüm, can, altın, görevler, giriş serisi, bulunan kelimeler, ipuçları ve ayarlar cihaz üzerinde saklanır. Oyunun temel modları internet olmadan çalışır.',
@@ -50,7 +55,7 @@ class PrivacyScreen extends StatelessWidget {
               const _PolicySection(
                 title: 'Hesabı silme',
                 body:
-                    'Hesap ekranındaki “Hesabı ve bulut yedeğini sil” seçeneği Firebase kullanıcı hesabını, Firestore bulut ilerlemesini, varsa kendi sosyal lig profilini/arkadaş listesini ve Fatih adı rezervasyonunu silmek için kullanılabilir. Cihazdaki bağımsız yerel oyun kaydı uygulama verileri silinene kadar cihazda kalabilir.',
+                    'Hesap ekranındaki “Hesabı ve bulut yedeğini sil” seçeneği Firebase kullanıcı hesabını, Firestore bulut ilerlemesini, varsa kendi sosyal lig profilini/arkadaş listesini, kendi engel listesini, kullanıcının gönderdiği şikâyet kayıtlarını ve Fatih adı rezervasyonunu silmek için kullanılabilir. Başka kullanıcıların güvenlik/moderasyon amacıyla oluşturduğu şikâyet kayıtları gerekli süre boyunca saklanabilir. Cihazdaki bağımsız yerel oyun kaydı uygulama verileri silinene kadar cihazda kalabilir.',
               ),
               GlassCard(
                 child: Column(

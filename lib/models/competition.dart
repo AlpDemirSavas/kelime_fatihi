@@ -196,6 +196,39 @@ class SocialSyncResult {
   final int seasonScore;
 }
 
+enum ModerationReportReason {
+  inappropriateUsername,
+  impersonation,
+  other;
+
+  String get key => switch (this) {
+    ModerationReportReason.inappropriateUsername => 'inappropriate_username',
+    ModerationReportReason.impersonation => 'impersonation',
+    ModerationReportReason.other => 'other',
+  };
+
+  String get title => switch (this) {
+    ModerationReportReason.inappropriateUsername => 'Uygunsuz kullanıcı adı',
+    ModerationReportReason.impersonation => 'Taklit / yanıltıcı kullanıcı adı',
+    ModerationReportReason.other => 'Diğer',
+  };
+}
+
+class BlockedPlayer {
+  const BlockedPlayer({required this.uid, required this.displayName});
+
+  final String uid;
+  final String displayName;
+
+  factory BlockedPlayer.fromMap(String uid, Map<String, dynamic> map) {
+    final raw = (map['displayName'] as String?)?.trim() ?? '';
+    return BlockedPlayer(
+      uid: uid,
+      displayName: raw.isEmpty ? 'Oyuncu' : raw,
+    );
+  }
+}
+
 class LeaderboardEntry {
   const LeaderboardEntry({
     required this.uid,

@@ -416,7 +416,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: blocked.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final player = blocked[index];
                     return ListTile(
@@ -733,7 +733,7 @@ class _RankingList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 20),
       itemCount: entries.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final entry = entries[index];
         final mine = entry.uid == currentUid;

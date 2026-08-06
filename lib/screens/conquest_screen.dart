@@ -1190,7 +1190,7 @@ class _ConquestScreenState extends State<ConquestScreen>
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: words.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           Divider(color: Colors.white.withValues(alpha: .08)),
                       itemBuilder: (_, index) {
                         final word = words[index];

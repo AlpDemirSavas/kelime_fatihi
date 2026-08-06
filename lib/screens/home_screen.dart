@@ -300,7 +300,7 @@ class HomeScreen extends StatelessWidget {
     Navigator.of(context).push(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 360),
-        pageBuilder: (_, animation, __) => FadeTransition(
+        pageBuilder: (_, animation, _) => FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,
             curve: Curves.easeOutCubic,

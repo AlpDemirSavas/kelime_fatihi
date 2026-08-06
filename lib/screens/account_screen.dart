@@ -286,13 +286,14 @@ class _AccountScreenState extends State<AccountScreen> {
                           onPressed: _busy
                               ? null
                               : () async {
+                                  final messenger = ScaffoldMessenger.of(context);
                                   setState(() => _busy = true);
                                   final error =
                                       await game.leaveSocialCompetition();
                                   if (!mounted) return;
                                   setState(() => _busy = false);
                                   if (error != null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(content: Text(error)),
                                     );
                                   }

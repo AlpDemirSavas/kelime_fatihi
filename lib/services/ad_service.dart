@@ -422,7 +422,7 @@ class AdService {
     );
 
     ad.show(
-      onUserEarnedReward: (_, __) {
+      onUserEarnedReward: (_, _) {
         earned = true;
       },
     );

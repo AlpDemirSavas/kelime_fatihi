@@ -94,12 +94,12 @@ class AudioService {
   }
 
   Future<void> dispose() async {
-    final players = <AudioPlayer>[
-      if (_selectPlayerInstance != null) _selectPlayerInstance!,
-      if (_feedbackPlayerInstance != null) _feedbackPlayerInstance!,
-      if (_celebrationPlayerInstance != null) _celebrationPlayerInstance!,
-      if (_musicPlayerInstance != null) _musicPlayerInstance!,
-    ];
+    final players = <AudioPlayer?>[
+      _selectPlayerInstance,
+      _feedbackPlayerInstance,
+      _celebrationPlayerInstance,
+      _musicPlayerInstance,
+    ].whereType<AudioPlayer>().toList(growable: false);
 
     if (players.isNotEmpty) {
       await Future.wait(players.map((player) => player.dispose()));

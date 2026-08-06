@@ -256,10 +256,10 @@ class DictionaryService {
               : (words.isNotEmpty ? words.first : seed));
     final others = words.where((word) => word != mainWord).toList()
       ..shuffle(seeded);
-    final selected = <String>[
+    final selected = <String>{
       mainWord,
       ...others.take(targetCount - 1),
-    ].toSet().toList();
+    }.toList();
     selected.sort((a, b) {
       final length = b.length.compareTo(a.length);
       return length != 0 ? length : a.compareTo(b);

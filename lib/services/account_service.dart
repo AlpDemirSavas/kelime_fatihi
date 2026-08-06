@@ -803,8 +803,8 @@ class AccountService extends ChangeNotifier {
             .get(const GetOptions(source: Source.serverAndCache))
             .timeout(const Duration(seconds: 5)),
       ]);
-      final blocked = results[0] as QuerySnapshot<Map<String, dynamic>>;
-      final reports = results[1] as QuerySnapshot<Map<String, dynamic>>;
+      final blocked = results[0];
+      final reports = results[1];
       if (blocked.docs.isEmpty && reports.docs.isEmpty) return true;
 
       final batch = db.batch();

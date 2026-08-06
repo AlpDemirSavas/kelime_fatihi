@@ -716,8 +716,9 @@ class GameController extends ChangeNotifier {
     if (dailyFinished) return 'Bugünün kelimesini zaten tamamladın.';
     final normalized = TurkishText.normalizeWord(guess);
     if (normalized.length != 5) return 'Kelime 5 harfli olmalı.';
-    if (!dictionary.contains(normalized))
+    if (!dictionary.contains(normalized)) {
       return 'Bu kelime oyun sözlüğünde bulunamadı.';
+    }
 
     dailyGuesses = [...dailyGuesses, normalized];
     final won = normalized == dailyWord;

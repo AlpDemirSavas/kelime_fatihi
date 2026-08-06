@@ -380,6 +380,52 @@ void main() {
     controller.dispose();
   });
 
+  test('bir harf aç ilk harften farklı bir konumu açar', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: StorageService(),
+      ads: AdService(),
+      purchases: _TestPurchaseService(),
+      audio: AudioService(enabled: false),
+      account: AccountService(firebaseReady: false),
+    );
+
+    controller.currentLevel = dictionary.buildLevel(1);
+    controller.coins = 200;
+
+    final revealResult = await controller.useHint(ConquestHintType.revealLetter);
+
+    expect(revealResult.used, isTrue);
+    expect(revealResult.spentCoins, 25);
+    expect(
+      controller.hints.values.any((indexes) => indexes.contains(0)),
+      isFalse,
+      reason: 'Bir harf aç, ilk harfi açmamalı.',
+    );
+    expect(
+      controller.hints.values.any((indexes) => indexes.any((i) => i > 0)),
+      isTrue,
+    );
+
+    final firstLetterResult =
+        await controller.useHint(ConquestHintType.firstLetter);
+
+    expect(firstLetterResult.used, isTrue);
+    expect(firstLetterResult.spentCoins, 20);
+    expect(
+      controller.hints.values.any((indexes) => indexes.contains(0)),
+      isTrue,
+    );
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
   test('akıllı ipucu türleri doğru maliyetle harf açar', () async {
     final dictionary = DictionaryService();
     await dictionary.load();

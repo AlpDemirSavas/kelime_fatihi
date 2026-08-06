@@ -915,6 +915,23 @@ class GameController extends ChangeNotifier {
         );
       }
       word = candidates.first;
+    } else if (type == ConquestHintType.revealLetter) {
+      // "Bir harf aç" ile "İlk harfi göster" aynı ipucu olmasın.
+      // Bu ipucu yalnızca ilk harf dışındaki gizli konumlardan birini açar.
+      final candidates = missing.where((w) {
+        final revealedForWord = hints[w] ?? const <int>{};
+        return List.generate(w.length, (i) => i).any(
+          (i) => i != 0 && !revealedForWord.contains(i),
+        );
+      }).toList();
+      if (candidates.isEmpty) {
+        return const HintResult(
+          false,
+          false,
+          message: 'İlk harf dışında açılabilecek gizli harf kalmadı.',
+        );
+      }
+      word = candidates.first;
     } else {
       word = missing.first;
     }
@@ -942,7 +959,9 @@ class GameController extends ChangeNotifier {
     final indexes = switch (type) {
       ConquestHintType.firstLetter => const <int>[0],
       ConquestHintType.revealTwoLetters => hidden.take(2).toList(),
-      ConquestHintType.revealLetter => <int>[hidden.first],
+      ConquestHintType.revealLetter => <int>[
+        hidden.firstWhere((i) => i != 0),
+      ],
     };
 
     if (useFree) {

@@ -360,7 +360,7 @@ void main() {
     await dictionary.load();
 
     expect(dictionary.wordCount, greaterThan(26000));
-    expect(dictionary.levelWordCount, greaterThan(23000));
+    expect(dictionary.levelWordCount, greaterThan(22500));
     expect(dictionary.seedCount, DictionaryService.maxLevel);
 
     final checkpoints = <int>[

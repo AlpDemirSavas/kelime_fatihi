@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kelime_fatihi/models/conquest_region.dart';
 import 'package:kelime_fatihi/services/dictionary_service.dart';
 
 String signature(String word) {
@@ -26,6 +27,23 @@ void main() {
       'yayıncı',
       'kitapçı',
       'şarkıcı',
+      'atel',
+      'atıl',
+      'iban',
+      'kobi',
+      'pati',
+      'pile',
+      'admin',
+      'mesir',
+      'sana',
+      'piksel',
+      'rakun',
+      'ünlü',
+      'kalıcı',
+      'kanlı',
+      'etli',
+      'atlı',
+      'katlı',
     ]) {
       expect(dictionary.contains(word), isTrue, reason: '$word sözlükte olmalı');
     }
@@ -68,6 +86,9 @@ void main() {
       'gelmek',
       'yapmak',
       'temizlemek',
+      'aştı',
+      'iple',
+      'stop',
       'abrakadabralamak',
     ]) {
       expect(dictionary.contains(word), isFalse, reason: '$word oyun sözlüğünde olmamalı');
@@ -121,12 +142,17 @@ void main() {
       'aktinyum',
       'blastula',
       'single',
+      'anal',
+      'bira',
+      'rakı',
+      'kanla',
+      'der',
     ]) {
       expect(dictionary.contains(word), isFalse, reason: '$word kesin reddedilmeli');
     }
   });
 
-  test('nadir kelimeler 10.000 bölümün hiçbirinde zorunlu hedef olmaz', () async {
+  test('nadir kelimeler 8.000 bölümün hiçbirinde zorunlu hedef olmaz', () async {
     final dictionary = DictionaryService();
     await dictionary.load();
 
@@ -146,7 +172,18 @@ void main() {
     }
   });
 
-  test('10.000 seviyelik geniş havuz hazırdır', () async {
+
+  test('8.000 bölüm 80 benzersiz harita durağına yayılır', () {
+    expect(ConquestRegion.regionCount, 80);
+    final names = <String>{};
+    for (var index = 0; index < ConquestRegion.regionCount; index++) {
+      names.add(ConquestRegion.forLevel(index * ConquestRegion.regionSize + 1).name);
+    }
+    expect(names.length, ConquestRegion.regionCount);
+    expect(ConquestRegion.forLevel(8000).endLevel, 8000);
+  });
+
+  test('8.000 seviyelik yoğunlaştırılmış havuz hazırdır', () async {
     final dictionary = DictionaryService();
     await dictionary.load();
 
@@ -154,11 +191,25 @@ void main() {
     expect(dictionary.levelWordCount, greaterThan(23000));
     expect(dictionary.seedCount, DictionaryService.maxLevel);
 
-    final checkpoints = <int>[1, 99, 100, 999, 1000, 2999, 3000, 5499, 5500, 7999, 8000, 9999, 10000];
+    final checkpoints = <int>[
+      1,
+      99,
+      100,
+      500,
+      501,
+      1600,
+      1601,
+      3800,
+      3801,
+      6300,
+      6301,
+      7999,
+      8000,
+    ];
     for (final levelNo in checkpoints) {
       final level = dictionary.buildLevel(levelNo);
       expect(level.number, levelNo);
-      expect(level.words.length, inInclusiveRange(5, 10));
+      expect(level.words.length, inInclusiveRange(5, 8));
       expect(level.letters.length, inInclusiveRange(5, 9));
     }
   });
@@ -168,18 +219,18 @@ void main() {
     await dictionary.load();
 
     expect(dictionary.buildLevel(1).letters.length, 5);
-    expect(dictionary.buildLevel(999).letters.length, 5);
-    expect(dictionary.buildLevel(1000).letters.length, 6);
-    expect(dictionary.buildLevel(2999).letters.length, 6);
-    expect(dictionary.buildLevel(3000).letters.length, 7);
-    expect(dictionary.buildLevel(5499).letters.length, 7);
-    expect(dictionary.buildLevel(5500).letters.length, 8);
-    expect(dictionary.buildLevel(7999).letters.length, 8);
+    expect(dictionary.buildLevel(500).letters.length, 5);
+    expect(dictionary.buildLevel(501).letters.length, 6);
+    expect(dictionary.buildLevel(1600).letters.length, 6);
+    expect(dictionary.buildLevel(1601).letters.length, 7);
+    expect(dictionary.buildLevel(3800).letters.length, 7);
+    expect(dictionary.buildLevel(3801).letters.length, 8);
+    expect(dictionary.buildLevel(6300).letters.length, 8);
+    expect(dictionary.buildLevel(6301).letters.length, 9);
     expect(dictionary.buildLevel(8000).letters.length, 9);
-    expect(dictionary.buildLevel(10000).letters.length, 9);
   });
 
-  test('10.000 optimize bölüm benzersiz ve tekrar dengeli kalır', () async {
+  test('8.000 optimize bölüm benzersiz ve tekrar dengeli kalır', () async {
     final dictionary = DictionaryService();
     await dictionary.load();
 
@@ -187,6 +238,7 @@ void main() {
     final targetFrequency = <String, int>{};
     var threeLetterTargets = 0;
     Set<String>? previousTargets;
+    final lastTargetLevel = <String, int>{};
 
     for (var levelNo = 1; levelNo <= DictionaryService.maxLevel; levelNo++) {
       final level = dictionary.buildLevel(levelNo);
@@ -197,34 +249,95 @@ void main() {
         reason: 'Tekrar eden harf çemberi: $levelNo',
       );
 
-      final expectedTargetCount = levelNo < 100
-          ? 5
-          : levelNo < 1000
-          ? 6
-          : levelNo < 3000
-          ? 7
-          : levelNo < 5500
-          ? 8
-          : levelNo < 8000
-          ? 9
-          : 10;
+      final expectedTargetCount = switch (level.letters.length) {
+        5 => 5,
+        6 => 6,
+        7 => 6,
+        8 => 7,
+        9 => 6,
+        _ => 0,
+      };
       expect(
         level.words.length,
         expectedTargetCount,
         reason: 'Bölüm $levelNo hedef sayısı dengesiz',
       );
 
+      final shortTargetCount = level.words.where((word) => word.length == 3).length;
+      expect(
+        shortTargetCount,
+        lessThanOrEqualTo(3),
+        reason: 'Bölüm $levelNo üç harfli hedefleri fazla yoğun',
+      );
+      for (final forbidden in <String>[
+        'açım',
+        'dini',
+        'iple',
+        'stop',
+        'anal',
+        'bira',
+        'rakı',
+        'kanla',
+        'der',
+        'birarada',
+        'mantarlar',
+        'sensen',
+        'verdi',
+        'kelepçele',
+        'restore',
+        'pagan',
+        'misal',
+        'ikaz',
+        'alındı',
+        'bastı',
+        'bindi',
+        'indi',
+        'kondu',
+        'bilinen',
+        'çıkacak',
+        'tutacak',
+        'taklidi',
+        'yurdu',
+        'daim',
+        'idam',
+        'afedersin',
+        'bendeniz',
+        'görünürde',
+        'görünüşte',
+        'götün',
+        'hafızasız',
+        'hödük',
+      ]) {
+        expect(
+          level.words,
+          isNot(contains(forbidden)),
+          reason: 'Bölüm $levelNo feedback ile kaldırılan hedef içeriyor: $forbidden',
+        );
+      }
+
       for (final word in level.words) {
         targetFrequency[word] = (targetFrequency[word] ?? 0) + 1;
         if (word.length == 3) threeLetterTargets++;
+
+        final previousLevel = lastTargetLevel[word];
+        if (previousLevel != null) {
+          final minimumDistance = word.length == 3 ? 30 : 20;
+          expect(
+            levelNo - previousLevel,
+            greaterThanOrEqualTo(minimumDistance),
+            reason:
+                'Hedef kelime çok erken tekrar ediyor: $word ($previousLevel/$levelNo)',
+          );
+        }
+        lastTargetLevel[word] = levelNo;
       }
 
       if (previousTargets != null) {
         final overlap = previousTargets.intersection(level.words.toSet()).length;
         expect(
           overlap,
-          lessThanOrEqualTo(2),
-          reason: 'Ardışık bölümler fazla benzer: ${levelNo - 1}/$levelNo',
+          0,
+          reason: 'Ardışık bölümlerde aynı zorunlu kelime var: ${levelNo - 1}/$levelNo',
         );
       }
       previousTargets = level.words.toSet();
@@ -235,7 +348,8 @@ void main() {
       (current, value) => value > current ? value : current,
     );
     expect(seenWheels.length, DictionaryService.maxLevel);
-    expect(maxTargetRepeat, lessThanOrEqualTo(120));
-    expect(threeLetterTargets, lessThan(15000));
+    expect(maxTargetRepeat, lessThanOrEqualTo(20));
+    expect(threeLetterTargets, lessThan(7000));
+    expect(targetFrequency.length, greaterThanOrEqualTo(5900));
   });
 }

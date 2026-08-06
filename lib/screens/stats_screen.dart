@@ -31,10 +31,28 @@ class StatsScreen extends StatelessWidget {
         GameTheme.violet,
       ),
       (
+        'Kusursuz Fetih',
+        '${game.perfectConquests}',
+        Icons.verified_rounded,
+        GameTheme.mint,
+      ),
+      (
+        'Bonus Hazinesi',
+        '${game.bonusTreasuresOpened}',
+        Icons.redeem_rounded,
+        GameTheme.gold,
+      ),
+      (
         'Günlük galibiyet',
         '${game.dailyWins}',
         Icons.calendar_month_rounded,
         GameTheme.mint,
+      ),
+      (
+        'Günün Kelimesi seri rekoru',
+        '${game.bestDailyPuzzleStreak}',
+        Icons.local_fire_department_rounded,
+        GameTheme.gold,
       ),
       (
         'En iyi giriş serisi',

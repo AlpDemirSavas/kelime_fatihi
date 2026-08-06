@@ -16,7 +16,7 @@ V6 policy
 6. `blocked_level_words.txt` contains real but unsuitable mandatory targets
    (archaic, specialist or overly obscure items). They may remain validation
    words but are never generated as level targets.
-7. The optimized 10,000-wheel campaign and mandatory target plan are preserved
+7. The optimized 8,000-wheel campaign and mandatory target plan are preserved
    by dictionary refreshes. Intentional campaign rebuilds are handled only by
    `tool/optimize_campaign.py`, which performs global anti-repetition scoring.
 
@@ -126,7 +126,7 @@ def build_level_seeds(
     curated: set[str],
     daily: set[str],
 ) -> tuple[list[str], dict[str, int]]:
-    """Choose 10k unique wheel signatures with progressively larger wheels."""
+    """Choose 8k unique wheel signatures with progressively larger wheels."""
     by_sig: dict[str, list[str]] = defaultdict(list)
     for word in level_words:
         by_sig[signature(word)].append(word)
@@ -150,8 +150,8 @@ def build_level_seeds(
         tier = 0 if preferred in curated else 1 if preferred in daily else 2
         candidates_by_len[len(sig)].append((preferred, count, sig, tier))
 
-    # 10,000-stage difficulty curve. Exact quotas total 10,000.
-    quotas = {5: 1000, 6: 2000, 7: 2500, 8: 2700, 9: 1800}
+    # 8,000-stage difficulty curve. Exact quotas match optimize_campaign.py.
+    quotas = {5: 500, 6: 1100, 7: 2200, 8: 2500, 9: 1700}
     for length, required in quotas.items():
         if len(candidates_by_len[length]) < required:
             raise SystemExit(
@@ -177,17 +177,17 @@ def build_level_seeds(
 
 
 def validate_existing_seeds(seeds: list[str], level_words: set[str]) -> tuple[bool, dict[str, int]]:
-    """Validate an existing 10k wheel map without requiring the seed itself as a target.
+    """Validate an existing 8k wheel map without requiring the seed itself as a target.
 
     A seed is an internal letter multiset. It may intentionally be absent from
     level_words when the lexical item is too obscure to show as a mandatory
     answer. We only require a unique 5..9-letter wheel and enough safe subwords
     to keep the level playable.
     """
-    if len(seeds) != 10_000:
+    if len(seeds) != 8_000:
         return False, {}
     signatures = [signature(word) for word in seeds]
-    if len(set(signatures)) != 10_000 or any(not 5 <= len(word) <= 9 for word in seeds):
+    if len(set(signatures)) != 8_000 or any(not 5 <= len(word) <= 9 for word in seeds):
         return False, {}
 
     by_sig: dict[str, list[str]] = defaultdict(list)
@@ -221,7 +221,7 @@ def main() -> None:
         raise SystemExit(
             "--rebuild-seeds artık bu scriptte kullanılmıyor. "
             "Önce sözlüğü güncelleyin, sonra tool/optimize_campaign.py ile "
-            "10.000 seviyeyi global olarak yeniden optimize edin."
+            "8.000 seviyeyi global olarak yeniden optimize edin."
         )
 
     project = args.project.resolve()
@@ -302,6 +302,7 @@ def main() -> None:
     should_accept = {
         "ana", "tara", "armut", "deste", "karınca", "boşal",
         "oyuncu", "sanatçı", "yayıncı", "kitapçı", "şarkıcı",
+        "atel", "atıl", "iban", "kobi", "pati", "pile", "admin", "mesir", "sana",
     }
     should_reject = {
         "atar", "tarar", "boşuyor", "tarıyor", "atıyor", "atacak", "taradı",
@@ -309,6 +310,7 @@ def main() -> None:
         "geliyor", "geldi", "gelmiş", "gidiyor", "gitti", "gidecek",
         "yapıyor", "yaptı", "yapacak", "koşuyor", "koştu", "koşacak",
         "bakıyor", "baktı", "bakacak", "abrakadabralamak", "temizlemek",
+        "aştı", "iple", "stop",
     }
     failed = []
     for word in sorted(should_accept):
@@ -321,8 +323,8 @@ def main() -> None:
         raise SystemExit(f"Dictionary regression failed: {failed}")
 
     signatures = [signature(word) for word in seeds]
-    if len(seeds) != 10_000 or len(set(signatures)) != 10_000:
-        raise SystemExit("10,000 level seeds are not unique by wheel signature")
+    if len(seeds) != 8_000 or len(set(signatures)) != 8_000:
+        raise SystemExit("8,000 level seeds are not unique by wheel signature")
     if min(richness.values()) < 5:
         raise SystemExit("A level wheel has fewer than five safe buildable target words")
 

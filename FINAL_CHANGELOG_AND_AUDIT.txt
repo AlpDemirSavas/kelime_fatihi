@@ -1,0 +1,75 @@
+KELİME FATİHİ - FINAL 8.000 QUALITY REPLACE
+=============================================
+
+KARAR
+- 7.000 seviyeye düşürülmedi.
+- 8.000 seviye korunarak tekrar ve kelime kalitesi iyileştirildi.
+- 7.000 test kampanyası da maksimum tekrar 45'te kalırken yalnız 5.294 benzersiz zorunlu hedef içeriyordu.
+- Final 8.000 kampanya maksimum tekrar 45 ve 5.554 benzersiz zorunlu hedef içeriyor.
+- Bu nedenle 8.000 sürüm daha uzun ve daha çeşitli olduğu için seçildi.
+
+FINAL KAMPANYA METRİKLERİ
+- Bölüm: 8.000
+- Benzersiz çember: 8.000 / 8.000
+- Zorunlu hedef toplamı: 75,201
+- Bölüm başına ortalama hedef: 9.40
+- Benzersiz zorunlu kelime: 5,554
+- En yüksek kelime tekrarı: 45
+- 45 kez tekrarlanan kelime sayısı: 298
+- 3 harfli zorunlu hedef toplamı: 12,250
+- Bir bölümde maksimum 3 harfli hedef: 3
+- 4+ adet 3 harfli hedef bulunan bölüm: 0
+- Ardışık iki bölümde maksimum ortak zorunlu hedef: 1
+- %75+ benzer ardışık çember: 0
+
+APP STORE BAZINA GÖRE
+- Bölüm: 10.000 -> 8.000
+- Maksimum kelime tekrarı: 97 -> 45
+- 4+ üç harfli hedef bulunan bölüm: 883 -> 0
+- Runtime kabul sözlüğü: 27,854 -> 27,854
+- Yeni runtime kabul edilen: admin, atel, iban, kobi, mesir, pile, sana
+- Bilerek tamamen reddedilen: anal, bira, der, iple, kanla, rakı, stop
+- İstenmeden kaybolan runtime kelime: 0
+
+BU KALİTE TURUNDA HEDEF ÖNCELİĞİNE ALINAN KELİMELER
+- Toplam: 256
+- 3 harf: 11
+- 4 harf: 48
+- 5 harf: 47
+- 6 harf: 48
+- 7 harf: 49
+- 8 harf: 53
+Bu kelimelerin büyük bölümü zaten oyunun kabul sözlüğündeydi; yeni uydurma kelime eklemek yerine zorunlu hedef önceliğine alındılar.
+
+KALİTE İÇİN ZORUNLU HEDEFTEN ÇIKARILAN EK ÖRNEKLER
+- akar, aşar, saki, sapık, sarpa, barı
+- anla, anma, ekle, atla, tara, tak, kana
+- açım, dini, iple, stop
+Bu tür gerçek sözlük girdilerinden uygun olanlar global sözlükten silinmeden bonus olarak kabul edilmeye devam eder; yalnız zorunlu hedef yapılmaz. Önceden açıkça reddedilmesi istenen anal, bira, rakı, kanla, der, iple ve stop ise runtime'da da reddedilir.
+
+FEEDBACK BÖLÜMLERİNİN FINAL HALİ
+- 155: nokta -> nokta, kont, nota, toka, not, ton
+- 162: stres -> stres, rest, sert, ters, ses, set
+- 185: sakız -> sakız, kazı, kısa, azı, kaz, kız
+- 192: taksi -> taksi, aksi, asit, kast, kat, tas
+
+GÜNÜN KELİMESİ
+- Uygulama açıkken gün değişiminde yeni günlük kelime yüklenir.
+- Uygulama arka plandan döndüğünde de tarih değişimi kontrol edilir.
+
+HARİTA
+- 8.000 bölüm = 80 bölge x 100 bölüm.
+- 80/80 harita adı benzersizdir.
+- 10.000'e ait runtime bölüm sabitleri kaldırılmıştır.
+
+SAVE / MIGRATION
+- content_version = 9.
+- Bölüm, can, altın ve istatistik korunur.
+- Yeniden eşlenen aktif bölümün geçici found/bonus/hint state'i temizlenir.
+
+DOĞRULAMA
+- Sonuç: PASS
+- Yapısal hata: 0
+- Python optimizer/build script py_compile: PASS
+- Optimizer deterministik rerun: PASS
+- Flutter/Dart SDK bu ortamda olmadığı için flutter analyze ve flutter test burada çalıştırılamadı.

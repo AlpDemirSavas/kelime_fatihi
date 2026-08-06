@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../core/turkish_text.dart';
 import '../models/chest_reward.dart';
@@ -48,21 +49,35 @@ class GameController extends ChangeNotifier {
   String streakRewardMessage = '';
   String lastRejectedWord = '';
   LevelMilestoneReward? _pendingMilestoneReward;
+  PerfectConquestReward? _pendingPerfectReward;
   int lastHeartSyncMs = 0;
   int comboCount = 0;
   int bestCombo = 0;
+  int perfectConquests = 0;
+  int bonusTreasureProgress = 0;
+  int bonusTreasuresOpened = 0;
   int freeHints = 0;
   int crownFragments = 0;
+  int mistakesThisLevel = 0;
+  String dailyPuzzleRewardMessage = '';
   bool soundEnabled = true;
+  bool hapticsEnabled = true;
+  bool reduceMotionEnabled = false;
+  bool systemReduceMotion = false;
   bool hintUsedThisLevel = false;
   bool isAdFree = false;
   bool cloudSyncing = false;
   String cloudStatusMessage = '';
   Timer? _cloudSyncTimer;
   Timer? _heartTicker;
+  Timer? _comboExpiryTimer;
 
   static const int maxNaturalHearts = 5;
+  static const int bonusTreasureTarget = 25;
   static const Duration heartRefill = Duration(minutes: 20);
+  static const Duration comboWindow = Duration(seconds: 12);
+  static const String _pendingLevelCompletionKey =
+      'pending_level_completion_v1';
 
   late ConquestLevel currentLevel;
   final Set<String> foundWords = <String>{};
@@ -77,10 +92,13 @@ class GameController extends ChangeNotifier {
 
   List<DailyMission> dailyMissions = <DailyMission>[];
 
+  bool get effectiveReduceMotion => reduceMotionEnabled || systemReduceMotion;
   bool get campaignCompleted => levelNumber > DictionaryService.maxLevel;
   int get displayLevel => min(levelNumber, DictionaryService.maxLevel);
   ConquestRegion get currentRegion => ConquestRegion.forLevel(displayLevel);
   int get crownsUnlocked => crownFragments ~/ 5;
+  int get remainingTargetWords => currentLevel.words.length - foundWords.length;
+  bool get perfectEligible => !hintUsedThisLevel && mistakesThisLevel == 0;
   bool get signedIn => account.signedIn;
   String get accountName => account.displayName;
   String get accountEmail => account.email;
@@ -105,9 +123,14 @@ class GameController extends ChangeNotifier {
     );
     bestDailyStreak = await storage.getInt('best_login_streak', 0);
     bestCombo = await storage.getInt('best_combo', 0);
+    perfectConquests = await storage.getInt('perfect_conquests', 0);
+    bonusTreasureProgress = await storage.getInt('bonus_treasure_progress', 0);
+    bonusTreasuresOpened = await storage.getInt('bonus_treasures_opened', 0);
     freeHints = await storage.getInt('free_hints', 0);
     crownFragments = await storage.getInt('crown_fragments', 0);
     soundEnabled = await storage.getBool('sound_enabled', true);
+    hapticsEnabled = await storage.getBool('haptics_enabled', true);
+    reduceMotionEnabled = await storage.getBool('reduce_motion_enabled', false);
     isAdFree = await storage.getBool('ad_free', false);
     audio.setEnabled(soundEnabled);
     lastHeartSyncMs = await storage.getInt(
@@ -120,7 +143,9 @@ class GameController extends ChangeNotifier {
     await _loadDailyState();
     await _loadMissions();
     await _migrateContentState();
+    await _recoverPendingLevelCompletion();
     await _loadConquestState();
+    await _recoverLegacyCompletedBoard();
     await account.initialize();
 
     // Ads and billing remain lazy. Core game, dictionary, missions, economy,
@@ -168,10 +193,11 @@ class GameController extends ChangeNotifier {
     _scheduleCloudSync();
   }
 
-  Future<void> _loadDailyState() async {
-    final now = DateTime.now();
+  Future<void> _loadDailyState({DateTime? at}) async {
+    final now = at ?? DateTime.now();
     dailyDateKey = _dateKey(now);
     dailyWord = dictionary.dailyWord(now);
+    dailyPuzzleRewardMessage = '';
     final storedDate = await storage.getString('daily_date');
 
     if (storedDate == dailyDateKey) {
@@ -192,12 +218,23 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  Future<bool> refreshDailyStateIfNeeded() async {
+    final now = DateTime.now();
+    if (_dateKey(now) == dailyDateKey) return false;
+
+    await _loadDailyState(at: now);
+    await _loadMissions(at: now);
+    notifyListeners();
+    return true;
+  }
+
   Future<void> _syncDailyPuzzleStreakForCompletedDay() async {
     final lastProcessedDate = await storage.getString(
       'last_daily_result_date',
     );
     if (lastProcessedDate == dailyDateKey) return;
 
+    dailyPuzzleRewardMessage = '';
     if (dailyWon) {
       final yesterday = _dateKey(
         DateTime.now().subtract(const Duration(days: 1)),
@@ -211,6 +248,19 @@ class GameController extends ChangeNotifier {
         dailyPuzzleStreak,
       );
       await storage.setString('last_daily_win_date', dailyDateKey);
+
+      final streakReward = switch (dailyPuzzleStreak) {
+        7 => 10,
+        30 => 30,
+        100 => 100,
+        _ => 0,
+      };
+      if (streakReward > 0) {
+        coins += streakReward;
+        dailyPuzzleRewardMessage =
+            '🔥 $dailyPuzzleStreak günlük Günün Kelimesi serisi! +$streakReward altın';
+        await storage.setInt('coins', coins);
+      }
     } else {
       dailyPuzzleStreak = 0;
     }
@@ -223,7 +273,8 @@ class GameController extends ChangeNotifier {
     );
   }
 
-  Future<void> _loadMissions() async {
+  Future<void> _loadMissions({DateTime? at}) async {
+    final now = at ?? DateTime.now();
     final storedDate = await storage.getString('mission_date');
     final raw = await storage.getString('missions_json');
     if (storedDate == dailyDateKey && raw != null && raw.isNotEmpty) {
@@ -238,7 +289,7 @@ class GameController extends ChangeNotifier {
       }
     }
 
-    dailyMissions = _generateDailyMissions(DateTime.now());
+    dailyMissions = _generateDailyMissions(now);
     await storage.setString('mission_date', dailyDateKey);
     await _persistMissions();
   }
@@ -342,27 +393,36 @@ class GameController extends ChangeNotifier {
   }
 
   Future<void> _migrateContentState() async {
-    const contentVersion = 7;
+    const contentVersion = 12;
     final storedVersion = await storage.getInt('content_version', 0);
     if (storedVersion >= contentVersion) return;
 
-    // V7 globally re-optimizes the 10,000-level campaign: target lists are
-    // frequency/curation ranked and wheel-size boundaries are aligned with
-    // target-count difficulty. Keep economy and reached level, but restart
-    // only the currently-open board so old found-word/hint state cannot leak
-    // into the remapped campaign.
-    await storage.setInt('active_level_number', -1);
-    await storage.setStringList('found_words', const <String>[]);
-    await storage.setStringList('bonus_words', const <String>[]);
-    await storage.setBool('hint_used_level', false);
-    await storage.setString('hints_json', '{}');
+    if (storedVersion < 11) {
+      // V11 remapped the 8,000-level campaign for the 20/30-level cooldown.
+      // Only users coming from an older campaign need their open board reset.
+      await storage.setInt('active_level_number', -1);
+      await storage.setStringList('found_words', const <String>[]);
+      await storage.setStringList('bonus_words', const <String>[]);
+      await storage.setBool('hint_used_level', false);
+      await storage.setString('hints_json', '{}');
+    }
+
+    // V12 adds engagement state without remapping levels. Existing V11 players
+    // keep the board they are currently solving.
+    if (storedVersion < 12) {
+      await storage.setInt('mistakes_this_level', 0);
+    }
     await storage.setInt('content_version', contentVersion);
   }
 
   Future<void> _loadConquestState() async {
+    final storedLevelNumber = levelNumber;
     if (levelNumber < 1) levelNumber = 1;
     if (levelNumber > DictionaryService.maxLevel + 1) {
       levelNumber = DictionaryService.maxLevel + 1;
+    }
+    if (levelNumber != storedLevelNumber) {
+      await storage.setInt('level_number', levelNumber);
     }
     currentLevel = dictionary.buildLevel(displayLevel);
     if (campaignCompleted) {
@@ -380,6 +440,7 @@ class GameController extends ChangeNotifier {
         ..clear()
         ..addAll(await storage.getStringList('bonus_words'));
       hintUsedThisLevel = await storage.getBool('hint_used_level', false);
+      mistakesThisLevel = await storage.getInt('mistakes_this_level', 0);
       final rawHints = await storage.getString('hints_json');
       if (rawHints != null && rawHints.isNotEmpty) {
         try {
@@ -399,6 +460,7 @@ class GameController extends ChangeNotifier {
         }
       }
     } else {
+      mistakesThisLevel = 0;
       await _persistConquest();
     }
   }
@@ -543,11 +605,12 @@ class GameController extends ChangeNotifier {
   Future<ConquestResult> submitConquestWord(String raw) async {
     if (campaignCompleted) {
       return ConquestResult.invalid(
-        '10.000 bölümün tamamını zaten fethettin. 👑',
+        '8.000 bölümün tamamını zaten fethettin. 👑',
       );
     }
     final word = TurkishText.normalizeWord(raw);
     if (word.length < 3) {
+      _comboExpiryTimer?.cancel();
       comboCount = 0;
       return ConquestResult.invalid('En az 3 harf seçmelisin.');
     }
@@ -555,6 +618,7 @@ class GameController extends ChangeNotifier {
     // Can sıfırken doğru veya bonus kelime girerek bölüme devam edilmesine
     // izin verme. Can kontrolü hedef/bonus doğrulamasından önce yapılmalı.
     if (hearts <= 0) {
+      _comboExpiryTimer?.cancel();
       comboCount = 0;
       return ConquestResult.noHeart();
     }
@@ -568,6 +632,7 @@ class GameController extends ChangeNotifier {
       foundWords.add(word);
       totalWordsFound++;
       comboCount++;
+      _armComboExpiry();
       bestCombo = max(bestCombo, comboCount);
       final comboMessage = _comboMessage(comboCount);
       final completed = currentLevel.words.every(foundWords.contains);
@@ -590,23 +655,43 @@ class GameController extends ChangeNotifier {
       bonusWords.add(word);
       coins += 1;
       comboCount++;
+      _armComboExpiry();
       bestCombo = max(bestCombo, comboCount);
       final comboMessage = _comboMessage(comboCount);
       await _advanceMission(MissionType.bonusWords);
       await _advanceMission(MissionType.combo, atLeast: comboCount);
+
+      bonusTreasureProgress++;
+      var treasureOpened = false;
+      if (bonusTreasureProgress >= bonusTreasureTarget) {
+        bonusTreasureProgress -= bonusTreasureTarget;
+        bonusTreasuresOpened++;
+        coins += 20;
+        treasureOpened = true;
+      }
+
       await storage.setInt('coins', coins);
       await storage.setInt('best_combo', bestCombo);
+      await storage.setInt('bonus_treasure_progress', bonusTreasureProgress);
+      await storage.setInt('bonus_treasures_opened', bonusTreasuresOpened);
       await _persistConquest();
       notifyListeners();
       return isProperName
           ? ConquestResult.properNameBonus(
               word,
               comboMessage: comboMessage,
+              bonusTreasureOpened: treasureOpened,
             )
-          : ConquestResult.bonus(word, comboMessage: comboMessage);
+          : ConquestResult.bonus(
+              word,
+              comboMessage: comboMessage,
+              bonusTreasureOpened: treasureOpened,
+            );
     }
 
+    _comboExpiryTimer?.cancel();
     comboCount = 0;
+    mistakesThisLevel++;
     lastRejectedWord = word;
     final wasFull = hearts >= maxNaturalHearts;
     hearts--;
@@ -615,11 +700,21 @@ class GameController extends ChangeNotifier {
       await storage.setInt('last_heart_sync_ms', lastHeartSyncMs);
     }
     await storage.setInt('hearts', hearts);
+    await storage.setInt('mistakes_this_level', mistakesThisLevel);
     notifyListeners();
     return ConquestResult.invalid(
       'Kelime bulunamadı. 1 can kaybettin.',
       lostHeart: true,
     );
+  }
+
+  void _armComboExpiry() {
+    _comboExpiryTimer?.cancel();
+    _comboExpiryTimer = Timer(comboWindow, () {
+      if (comboCount == 0) return;
+      comboCount = 0;
+      notifyListeners();
+    });
   }
 
   String _comboMessage(int combo) => switch (combo) {
@@ -630,36 +725,83 @@ class GameController extends ChangeNotifier {
     _ => '',
   };
 
-  Future<HintResult> useHint() async {
+  Future<HintResult> useHint([
+    ConquestHintType type = ConquestHintType.revealLetter,
+  ]) async {
     final missing = currentLevel.words
         .where((w) => !foundWords.contains(w))
         .toList();
     if (missing.isEmpty) return const HintResult(false, false);
 
-    final useFree = freeHints > 0;
-    if (!useFree && coins < 25) return const HintResult(false, false);
-
     missing.sort((a, b) => a.length.compareTo(b.length));
-    final word = missing.first;
+    String word;
+    if (type == ConquestHintType.firstLetter) {
+      final candidates = missing
+          .where((w) => !(hints[w]?.contains(0) ?? false))
+          .toList();
+      if (candidates.isEmpty) {
+        return const HintResult(
+          false,
+          false,
+          message: 'Kalan kelimelerin ilk harfleri zaten açık.',
+        );
+      }
+      word = candidates.first;
+    } else {
+      word = missing.first;
+    }
     final revealed = hints.putIfAbsent(word, () => <int>{});
-    final nextIndex = List.generate(
-      word.length,
-      (i) => i,
-    ).firstWhere((i) => !revealed.contains(i), orElse: () => -1);
-    if (nextIndex < 0) return const HintResult(false, false);
+
+    final baseCost = switch (type) {
+      ConquestHintType.revealLetter => 25,
+      ConquestHintType.firstLetter => 20,
+      ConquestHintType.revealTwoLetters => 40,
+    };
+    final useFree = type == ConquestHintType.revealLetter && freeHints > 0;
+    if (!useFree && coins < baseCost) {
+      return HintResult(
+        false,
+        false,
+        message: 'Bu ipucu için $baseCost altın gerekiyor.',
+      );
+    }
+
+    final hidden = List.generate(word.length, (i) => i)
+        .where((i) => !revealed.contains(i))
+        .toList();
+    if (hidden.isEmpty) return const HintResult(false, false);
+
+    final indexes = switch (type) {
+      ConquestHintType.firstLetter => const <int>[0],
+      ConquestHintType.revealTwoLetters => hidden.take(2).toList(),
+      ConquestHintType.revealLetter => <int>[hidden.first],
+    };
 
     if (useFree) {
       freeHints--;
       await storage.setInt('free_hints', freeHints);
     } else {
-      coins -= 25;
+      coins -= baseCost;
       await storage.setInt('coins', coins);
     }
+
     hintUsedThisLevel = true;
-    revealed.add(nextIndex);
+    revealed.addAll(indexes);
     await _persistConquest();
     notifyListeners();
-    return HintResult(true, useFree);
+
+    final label = switch (type) {
+      ConquestHintType.revealLetter => 'Bir harf açıldı',
+      ConquestHintType.firstLetter => 'İlk harf açıldı',
+      ConquestHintType.revealTwoLetters => '${indexes.length} harf açıldı',
+    };
+    return HintResult(
+      true,
+      useFree,
+      spentCoins: useFree ? 0 : baseCost,
+      revealedCount: indexes.length,
+      message: useFree ? '$label · ücretsiz ipucu' : '$label · −$baseCost altın',
+    );
   }
 
   Future<void> shuffleLetters() async {
@@ -676,41 +818,186 @@ class GameController extends ChangeNotifier {
     if (campaignCompleted) return null;
     if (!currentLevel.words.every(foundWords.contains)) return null;
 
-    final completedLevelNumber = currentLevel.number;
-    levelsCompleted++;
-    coins += 5;
-    _pendingMilestoneReward = await _grantMilestone(
-      completedLevelNumber,
+    // Bölüm sonucu ekrandan/reklamdan bağımsız olarak önce kalıcı hale gelir.
+    // Journal, uygulama tam kayıt sırasında öldürülse bile işlemin aynı mutlak
+    // değerlerle tekrar uygulanabilmesini sağlar; ödül iki kez verilmez.
+    final plan = _buildLevelCompletionPlan();
+    await storage.setString(
+      _pendingLevelCompletionKey,
+      jsonEncode(plan.toJson()),
     );
-    await _advanceMission(MissionType.levels);
-    if (!hintUsedThisLevel) await _advanceMission(MissionType.noHintLevel);
+    await _applyLevelCompletionPlan(plan, exposeRewards: true);
+    await storage.setString(_pendingLevelCompletionKey, '');
 
-    ChestReward? chest;
-    if (levelsCompleted % 5 == 0) {
-      chest = await _grantChest(levelsCompleted ~/ 5);
+    _scheduleCloudSync();
+    return _chestRewardFor(plan.nextLevelsCompleted);
+  }
+
+  _LevelCompletionPlan _buildLevelCompletionPlan() {
+    final completedLevelNumber = currentLevel.number;
+    final nextLevelsCompleted = levelsCompleted + 1;
+    final nextLevelNumber = levelNumber >= DictionaryService.maxLevel
+        ? DictionaryService.maxLevel + 1
+        : levelNumber + 1;
+    final wasPerfect = perfectEligible;
+    final milestone = _milestoneRewardFor(completedLevelNumber);
+    final chest = _chestRewardFor(nextLevelsCompleted);
+
+    var nextCoins = coins + 5;
+    var nextHearts = hearts;
+    var nextFreeHints = freeHints;
+    var nextCrownFragments = crownFragments;
+    var nextPerfectConquests = perfectConquests;
+
+    if (wasPerfect) {
+      nextCoins += 5;
+      nextPerfectConquests++;
+    }
+    if (milestone != null) {
+      nextCoins += milestone.coins;
+      nextHearts += milestone.hearts;
+      nextFreeHints += milestone.freeHints;
+      nextCrownFragments += milestone.crownFragments;
+    }
+    if (chest != null) {
+      switch (chest.type) {
+        case ChestRewardType.heart:
+          nextHearts += chest.amount;
+          break;
+        case ChestRewardType.coins:
+          nextCoins += chest.amount;
+          break;
+        case ChestRewardType.freeHint:
+          nextFreeHints += chest.amount;
+          break;
+        case ChestRewardType.crownFragment:
+          nextCrownFragments += chest.amount;
+          break;
+      }
     }
 
-    if (levelNumber >= DictionaryService.maxLevel) {
-      levelNumber = DictionaryService.maxLevel + 1;
-    } else {
-      levelNumber++;
+    var nextMissions = _missionSnapshotAfterProgress(
+      dailyMissions,
+      MissionType.levels,
+    );
+    if (!hintUsedThisLevel) {
+      nextMissions = _missionSnapshotAfterProgress(
+        nextMissions,
+        MissionType.noHintLevel,
+      );
     }
+
+    return _LevelCompletionPlan(
+      completedLevelNumber: completedLevelNumber,
+      nextLevelNumber: nextLevelNumber,
+      nextLevelsCompleted: nextLevelsCompleted,
+      nextCoins: nextCoins,
+      nextHearts: nextHearts,
+      nextFreeHints: nextFreeHints,
+      nextCrownFragments: nextCrownFragments,
+      nextPerfectConquests: nextPerfectConquests,
+      wasPerfect: wasPerfect,
+      missionDateKey: dailyDateKey,
+      missions: nextMissions,
+    );
+  }
+
+  List<DailyMission> _missionSnapshotAfterProgress(
+    List<DailyMission> source,
+    MissionType type,
+  ) {
+    return source.map((mission) {
+      if (mission.type != type || mission.claimed) return mission;
+      return mission.copyWith(
+        progress: min(mission.target, mission.progress + 1),
+      );
+    }).toList();
+  }
+
+  Future<void> _applyLevelCompletionPlan(
+    _LevelCompletionPlan plan, {
+    required bool exposeRewards,
+  }) async {
+    levelNumber = plan.nextLevelNumber;
+    levelsCompleted = plan.nextLevelsCompleted;
+    coins = plan.nextCoins;
+    hearts = plan.nextHearts;
+    freeHints = plan.nextFreeHints;
+    crownFragments = plan.nextCrownFragments;
+    perfectConquests = plan.nextPerfectConquests;
+    if (dailyDateKey == plan.missionDateKey) {
+      dailyMissions = plan.missions;
+    }
+
     foundWords.clear();
     bonusWords.clear();
     hints.clear();
+    _comboExpiryTimer?.cancel();
     comboCount = 0;
     lastRejectedWord = '';
     hintUsedThisLevel = false;
+    mistakesThisLevel = 0;
     currentLevel = dictionary.buildLevel(displayLevel);
 
+    if (exposeRewards) {
+      _pendingMilestoneReward = _milestoneRewardFor(
+        plan.completedLevelNumber,
+      );
+      _pendingPerfectReward = plan.wasPerfect
+          ? const PerfectConquestReward(coins: 5, message: '+5 altın')
+          : null;
+    } else {
+      _pendingMilestoneReward = null;
+      _pendingPerfectReward = null;
+    }
+
+    // Journal silinmeden önce bütün değerler mutlak olarak yazılır. Aynı plan
+    // recovery sırasında tekrar uygulanırsa artışlar ikinci kez gerçekleşmez.
     await storage.setInt('levels_completed', levelsCompleted);
     await storage.setInt('level_number', levelNumber);
     await storage.setInt('coins', coins);
+    await storage.setInt('hearts', hearts);
+    await storage.setInt('free_hints', freeHints);
+    await storage.setInt('crown_fragments', crownFragments);
+    await storage.setInt('perfect_conquests', perfectConquests);
+    await storage.setInt('mistakes_this_level', mistakesThisLevel);
+    await _persistMissions();
     await _persistConquest();
     notifyListeners();
+  }
 
-    _scheduleCloudSync();
-    return chest;
+  Future<void> _recoverPendingLevelCompletion() async {
+    final raw = await storage.getString(_pendingLevelCompletionKey);
+    if (raw == null || raw.trim().isEmpty) return;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        await storage.setString(_pendingLevelCompletionKey, '');
+        return;
+      }
+      final plan = _LevelCompletionPlan.fromJson(decoded);
+      await _applyLevelCompletionPlan(plan, exposeRewards: false);
+      await storage.setString(_pendingLevelCompletionKey, '');
+    } catch (_) {
+      // Bozuk bir journal oyunu kilitlemesin. Eski yeşil-tahta recovery'si
+      // _loadConquestState sonrasında ayrıca çalışır.
+      await storage.setString(_pendingLevelCompletionKey, '');
+    }
+  }
+
+  Future<void> _recoverLegacyCompletedBoard() async {
+    if (campaignCompleted || currentLevel.words.isEmpty) return;
+    if (!currentLevel.words.every(foundWords.contains)) return;
+
+    // Eski akışta son kelime kaydediliyor, ardından reklam açılıyor ve ancak
+    // reklam kapandıktan sonra completeLevel çağrılıyordu. Reklam sırasında
+    // uygulama öldürülürse tüm kutular yeşil kalıyor fakat level_number
+    // ilerlemiyordu. Böyle bir kayıt bulunursa reklamsız ve güvenli biçimde
+    // bir kez tamamla.
+    await completeLevel();
+    _pendingMilestoneReward = null;
+    _pendingPerfectReward = null;
   }
 
   bool isMilestoneLevel(int level) {
@@ -724,98 +1011,91 @@ class GameController extends ChangeNotifier {
     return reward;
   }
 
-  Future<LevelMilestoneReward?> _grantMilestone(int level) async {
-    LevelMilestoneReward? reward;
+  PerfectConquestReward? takePendingPerfectReward() {
+    final reward = _pendingPerfectReward;
+    _pendingPerfectReward = null;
+    return reward;
+  }
 
+  LevelMilestoneReward? _milestoneRewardFor(int level) {
     if (level >= 100 && level % 100 == 0) {
-      reward = LevelMilestoneReward(
+      return LevelMilestoneReward(
         level: level,
         title: '$level Bölümlük Büyük Fetih',
         message: '+50 altın ve +1 taç parçası',
         coins: 50,
         crownFragments: 1,
       );
-    } else if (level == 50) {
-      reward = const LevelMilestoneReward(
+    }
+    if (level == 50) {
+      return const LevelMilestoneReward(
         level: 50,
         title: '50 Bölümlük Usta Fetih',
         message: '+25 altın ve +1 can',
         coins: 25,
         hearts: 1,
       );
-    } else if (level == 25) {
-      reward = const LevelMilestoneReward(
+    }
+    if (level == 25) {
+      return const LevelMilestoneReward(
         level: 25,
         title: '25 Bölümlük Güçlü Başlangıç',
         message: '+15 altın ve +1 ücretsiz ipucu',
         coins: 15,
         freeHints: 1,
       );
-    } else if (level == 10) {
-      reward = const LevelMilestoneReward(
+    }
+    if (level == 10) {
+      return const LevelMilestoneReward(
         level: 10,
         title: 'İlk 10 Bölüm Fethedildi',
         message: '+10 altın',
         coins: 10,
       );
     }
-
-    if (reward == null) return null;
-
-    coins += reward.coins;
-    hearts += reward.hearts;
-    freeHints += reward.freeHints;
-    crownFragments += reward.crownFragments;
-
-    await storage.setInt('coins', coins);
-    await storage.setInt('hearts', hearts);
-    await storage.setInt('free_hints', freeHints);
-    await storage.setInt('crown_fragments', crownFragments);
-    return reward;
+    return null;
   }
 
-  Future<ChestReward> _grantChest(int chestNumber) async {
+  ChestReward? _chestRewardFor(int completedLevels) {
+    if (completedLevels % 5 != 0) return null;
+
+    final chestNumber = completedLevels ~/ 5;
+    final tier = completedLevels % 100 == 0
+        ? ChestRewardTier.region
+        : completedLevels % 50 == 0
+        ? ChestRewardTier.master
+        : completedLevels % 10 == 0
+        ? ChestRewardTier.conquest
+        : ChestRewardTier.scout;
     final type = ChestRewardType
         .values[(chestNumber * 7 + 3) % ChestRewardType.values.length];
-    late final ChestReward reward;
-    switch (type) {
-      case ChestRewardType.heart:
-        hearts += 1;
-        await storage.setInt('hearts', hearts);
-        reward = const ChestReward(
-          type: ChestRewardType.heart,
-          amount: 1,
-          label: '+1 Can',
-        );
-        break;
-      case ChestRewardType.coins:
-        coins += 5;
-        reward = const ChestReward(
-          type: ChestRewardType.coins,
-          amount: 5,
-          label: '+5 Altın',
-        );
-        break;
-      case ChestRewardType.freeHint:
-        freeHints += 1;
-        await storage.setInt('free_hints', freeHints);
-        reward = const ChestReward(
-          type: ChestRewardType.freeHint,
-          amount: 1,
-          label: '+1 Ücretsiz İpucu',
-        );
-        break;
-      case ChestRewardType.crownFragment:
-        crownFragments += 1;
-        await storage.setInt('crown_fragments', crownFragments);
-        reward = const ChestReward(
-          type: ChestRewardType.crownFragment,
-          amount: 1,
-          label: '+1 Taç Parçası',
-        );
-        break;
-    }
-    return reward;
+
+    return switch (type) {
+      ChestRewardType.heart => ChestReward(
+        type: type,
+        amount: 1,
+        label: '+1 Can',
+        tier: tier,
+      ),
+      ChestRewardType.coins => ChestReward(
+        type: type,
+        amount: 5,
+        label: '+5 Altın',
+        tier: tier,
+      ),
+      ChestRewardType.freeHint => ChestReward(
+        type: type,
+        amount: 1,
+        label: '+1 Ücretsiz İpucu',
+        tier: tier,
+      ),
+      ChestRewardType.crownFragment => ChestReward(
+        type: type,
+        amount: 1,
+        label: '+1 Taç Parçası',
+        tier: tier,
+      ),
+    };
   }
 
   Future<void> _persistConquest() async {
@@ -823,6 +1103,7 @@ class GameController extends ChangeNotifier {
     await storage.setStringList('found_words', foundWords.toList());
     await storage.setStringList('bonus_words', bonusWords.toList());
     await storage.setBool('hint_used_level', hintUsedThisLevel);
+    await storage.setInt('mistakes_this_level', mistakesThisLevel);
     await storage.setString(
       'hints_json',
       jsonEncode(hints.map((key, value) => MapEntry(key, value.toList()))),
@@ -885,6 +1166,47 @@ class GameController extends ChangeNotifier {
     audio.setEnabled(value);
     await storage.setBool('sound_enabled', value);
     notifyListeners();
+  }
+
+  Future<void> setHapticsEnabled(bool value) async {
+    hapticsEnabled = value;
+    await storage.setBool('haptics_enabled', value);
+    if (value) {
+      await HapticFeedback.selectionClick();
+    }
+    notifyListeners();
+  }
+
+  Future<void> setReduceMotionEnabled(bool value) async {
+    reduceMotionEnabled = value;
+    await storage.setBool('reduce_motion_enabled', value);
+    notifyListeners();
+  }
+
+  void setSystemReduceMotion(bool value) {
+    if (systemReduceMotion == value) return;
+    systemReduceMotion = value;
+    notifyListeners();
+  }
+
+  Future<void> hapticSelection() async {
+    if (!hapticsEnabled) return;
+    await HapticFeedback.selectionClick();
+  }
+
+  Future<void> hapticLight() async {
+    if (!hapticsEnabled) return;
+    await HapticFeedback.lightImpact();
+  }
+
+  Future<void> hapticMedium() async {
+    if (!hapticsEnabled) return;
+    await HapticFeedback.mediumImpact();
+  }
+
+  Future<void> hapticHeavy() async {
+    if (!hapticsEnabled) return;
+    await HapticFeedback.heavyImpact();
   }
 
   Future<void> addDebugHeart() async {
@@ -974,6 +1296,10 @@ class GameController extends ChangeNotifier {
             bestCombo,
             (cloud['bestCombo'] as num?)?.toInt() ?? 0,
           );
+          perfectConquests = max(
+            perfectConquests,
+            (cloud['perfectConquests'] as num?)?.toInt() ?? 0,
+          );
           crownFragments = max(
             crownFragments,
             (cloud['crownFragments'] as num?)?.toInt() ?? 0,
@@ -988,6 +1314,7 @@ class GameController extends ChangeNotifier {
             bestDailyPuzzleStreak,
           );
           await storage.setInt('best_combo', bestCombo);
+          await storage.setInt('perfect_conquests', perfectConquests);
           await storage.setInt('crown_fragments', crownFragments);
           await storage.setInt('active_level_number', -1);
           await storage.setStringList('found_words', const <String>[]);
@@ -1011,6 +1338,7 @@ class GameController extends ChangeNotifier {
     'bestDailyStreak': bestDailyStreak,
     'bestDailyPuzzleStreak': bestDailyPuzzleStreak,
     'bestCombo': bestCombo,
+    'perfectConquests': perfectConquests,
     'crownFragments': crownFragments,
   };
 
@@ -1026,6 +1354,7 @@ class GameController extends ChangeNotifier {
   void dispose() {
     _cloudSyncTimer?.cancel();
     _heartTicker?.cancel();
+    _comboExpiryTimer?.cancel();
     super.dispose();
   }
 
@@ -1036,6 +1365,78 @@ class GameController extends ChangeNotifier {
       word.length,
       (i) => revealed.contains(i) ? TurkishText.upper(word[i]) : '•',
     ).join(' ');
+  }
+}
+
+class _LevelCompletionPlan {
+  const _LevelCompletionPlan({
+    required this.completedLevelNumber,
+    required this.nextLevelNumber,
+    required this.nextLevelsCompleted,
+    required this.nextCoins,
+    required this.nextHearts,
+    required this.nextFreeHints,
+    required this.nextCrownFragments,
+    required this.nextPerfectConquests,
+    required this.wasPerfect,
+    required this.missionDateKey,
+    required this.missions,
+  });
+
+  final int completedLevelNumber;
+  final int nextLevelNumber;
+  final int nextLevelsCompleted;
+  final int nextCoins;
+  final int nextHearts;
+  final int nextFreeHints;
+  final int nextCrownFragments;
+  final int nextPerfectConquests;
+  final bool wasPerfect;
+  final String missionDateKey;
+  final List<DailyMission> missions;
+
+  Map<String, Object> toJson() => {
+    'completed_level_number': completedLevelNumber,
+    'next_level_number': nextLevelNumber,
+    'next_levels_completed': nextLevelsCompleted,
+    'next_coins': nextCoins,
+    'next_hearts': nextHearts,
+    'next_free_hints': nextFreeHints,
+    'next_crown_fragments': nextCrownFragments,
+    'next_perfect_conquests': nextPerfectConquests,
+    'was_perfect': wasPerfect,
+    'mission_date_key': missionDateKey,
+    'missions': missions.map((mission) => mission.toJson()).toList(),
+  };
+
+  factory _LevelCompletionPlan.fromJson(Map<String, dynamic> json) {
+    final rawMissions = json['missions'];
+    final missions = rawMissions is List
+        ? rawMissions
+              .whereType<Map>()
+              .map(
+                (item) => DailyMission.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList()
+        : <DailyMission>[];
+
+    int readInt(String key) => (json[key] as num).toInt();
+
+    return _LevelCompletionPlan(
+      completedLevelNumber: readInt('completed_level_number'),
+      nextLevelNumber: readInt('next_level_number'),
+      nextLevelsCompleted: readInt('next_levels_completed'),
+      nextCoins: readInt('next_coins'),
+      nextHearts: readInt('next_hearts'),
+      nextFreeHints: readInt('next_free_hints'),
+      nextCrownFragments: readInt('next_crown_fragments'),
+      nextPerfectConquests: readInt('next_perfect_conquests'),
+      wasPerfect: json['was_perfect'] as bool? ?? false,
+      missionDateKey: json['mission_date_key'] as String? ?? '',
+      missions: missions,
+    );
   }
 }
 
@@ -1059,10 +1460,29 @@ class LevelMilestoneReward {
   final int crownFragments;
 }
 
+enum ConquestHintType { revealLetter, firstLetter, revealTwoLetters }
+
 class HintResult {
-  const HintResult(this.used, this.usedFreeHint);
+  const HintResult(
+    this.used,
+    this.usedFreeHint, {
+    this.spentCoins = 0,
+    this.revealedCount = 0,
+    this.message = '',
+  });
+
   final bool used;
   final bool usedFreeHint;
+  final int spentCoins;
+  final int revealedCount;
+  final String message;
+}
+
+class PerfectConquestReward {
+  const PerfectConquestReward({required this.coins, required this.message});
+
+  final int coins;
+  final String message;
 }
 
 class ConquestResult {
@@ -1075,6 +1495,8 @@ class ConquestResult {
     required this.noHearts,
     required this.isDuplicate,
     required this.comboMessage,
+    required this.word,
+    required this.bonusTreasureOpened,
   });
 
   final String message;
@@ -1085,6 +1507,8 @@ class ConquestResult {
   final bool noHearts;
   final bool isDuplicate;
   final String comboMessage;
+  final String word;
+  final bool bonusTreasureOpened;
 
   factory ConquestResult.target(
     String word, {
@@ -1101,25 +1525,18 @@ class ConquestResult {
     noHearts: false,
     isDuplicate: false,
     comboMessage: comboMessage,
+    word: word,
+    bonusTreasureOpened: false,
   );
 
-  factory ConquestResult.bonus(String word, {required String comboMessage}) =>
-      ConquestResult._(
-        message: '${TurkishText.upper(word)} bonus! +1 altın',
-        isTarget: false,
-        isBonus: true,
-        completed: false,
-        lostHeart: false,
-        noHearts: false,
-        isDuplicate: false,
-        comboMessage: comboMessage,
-      );
-
-  factory ConquestResult.properNameBonus(
+  factory ConquestResult.bonus(
     String word, {
     required String comboMessage,
+    bool bonusTreasureOpened = false,
   }) => ConquestResult._(
-    message: '${TurkishText.upper(word)} özel isim bonusu! +1 altın',
+    message: bonusTreasureOpened
+        ? '${TurkishText.upper(word)} bonus! Bonus Hazinesi açıldı: +20 altın 🎁'
+        : '${TurkishText.upper(word)} bonus! +1 altın',
     isTarget: false,
     isBonus: true,
     completed: false,
@@ -1127,6 +1544,27 @@ class ConquestResult {
     noHearts: false,
     isDuplicate: false,
     comboMessage: comboMessage,
+    word: word,
+    bonusTreasureOpened: bonusTreasureOpened,
+  );
+
+  factory ConquestResult.properNameBonus(
+    String word, {
+    required String comboMessage,
+    bool bonusTreasureOpened = false,
+  }) => ConquestResult._(
+    message: bonusTreasureOpened
+        ? '${TurkishText.upper(word)} özel isim bonusu! Bonus Hazinesi: +20 altın 🎁'
+        : '${TurkishText.upper(word)} özel isim bonusu! +1 altın',
+    isTarget: false,
+    isBonus: true,
+    completed: false,
+    lostHeart: false,
+    noHearts: false,
+    isDuplicate: false,
+    comboMessage: comboMessage,
+    word: word,
+    bonusTreasureOpened: bonusTreasureOpened,
   );
 
   factory ConquestResult.duplicate(String word) => ConquestResult._(
@@ -1138,6 +1576,8 @@ class ConquestResult {
     noHearts: false,
     isDuplicate: true,
     comboMessage: '',
+    word: word,
+    bonusTreasureOpened: false,
   );
 
   factory ConquestResult.invalid(String message, {bool lostHeart = false}) =>
@@ -1150,6 +1590,8 @@ class ConquestResult {
         noHearts: false,
         isDuplicate: false,
         comboMessage: '',
+        word: '',
+        bonusTreasureOpened: false,
       );
 
   factory ConquestResult.noHeart() => const ConquestResult._(
@@ -1161,5 +1603,7 @@ class ConquestResult {
     noHearts: true,
     isDuplicate: false,
     comboMessage: '',
+    word: '',
+    bonusTreasureOpened: false,
   );
 }

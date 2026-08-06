@@ -8,6 +8,7 @@ import '../widgets/animated_background.dart';
 import '../widgets/game_scope.dart';
 import '../widgets/glass_card.dart';
 import 'privacy_screen.dart';
+import 'settings_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -80,6 +81,52 @@ class _AccountScreenState extends State<AccountScreen> {
                         ],
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              GlassCard(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: GameTheme.mint.withValues(alpha: .11),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.tune_rounded,
+                        color: GameTheme.mint,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Oyun Ayarları',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 17,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Titreşim ve animasyon tercihlerini düzenle.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded),
                   ],
                 ),
               ),

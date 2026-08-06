@@ -99,12 +99,12 @@ class HomeScreen extends StatelessWidget {
                       eyebrow: '${region.emoji} ${region.name.toUpperCase()}',
                       title: 'Sonsuz Fetih',
                       subtitle: game.campaignCompleted
-                          ? '10.000 bölümün tamamı fethedildi 👑'
-                          : '10.000 benzersiz harf çemberi • Combo • Sandık • Bonus kelime',
+                          ? '8.000 bölümün tamamı fethedildi 👑'
+                          : '8.000 benzersiz çember • Kusursuz Fetih • Bonus Hazinesi • Combo',
                       icon: Icons.auto_awesome_rounded,
                       accent: region.accent,
                       badge: game.campaignCompleted
-                          ? '10.000/10.000'
+                          ? '8.000/8.000'
                           : 'Bölüm ${game.levelNumber}',
                       onTap: () => _open(context, const ConquestScreen()),
                     ),
@@ -245,6 +245,10 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _open(BuildContext context, Widget page) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+      return;
+    }
     Navigator.of(context).push(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 360),

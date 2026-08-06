@@ -23,7 +23,25 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 14),
-  )..repeat();
+  );
+  bool? _reduceMotion;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion == reduceMotion) {
+      if (!reduceMotion && !_controller.isAnimating) _controller.repeat();
+      return;
+    }
+    _reduceMotion = reduceMotion;
+    if (_reduceMotion == true) {
+      _controller.stop();
+      _controller.value = 0;
+    } else {
+      _controller.repeat();
+    }
+  }
 
   @override
   void dispose() {
@@ -33,6 +51,17 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
 
   @override
   Widget build(BuildContext context) {
+    if (_reduceMotion == true) {
+      return RepaintBoundary(
+        child: CustomPaint(
+          painter: _NebulaPainter(0, widget.accent),
+          isComplex: true,
+          willChange: false,
+          child: widget.child,
+        ),
+      );
+    }
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {

@@ -1,7 +1,7 @@
 name: kelime_fatihi
 description: Kelime Fatihi - Türkçe günlük kelime ve sonsuz kelime fetih oyunu.
 publish_to: 'none'
-version: 1.7.1+8
+version: 1.9.0+8
 
 environment:
   sdk: '>=3.10.0 <4.0.0'

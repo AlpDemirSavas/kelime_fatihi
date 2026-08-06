@@ -3,21 +3,59 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 
 class AudioService {
-  final AudioPlayer _selectPlayer = AudioPlayer();
-  final AudioPlayer _feedbackPlayer = AudioPlayer();
-  final AudioPlayer _celebrationPlayer = AudioPlayer();
-  final AudioPlayer _musicPlayer = AudioPlayer();
+  AudioService({this.enabled = true});
 
-  bool enabled = true;
+  AudioPlayer? _selectPlayerInstance;
+  AudioPlayer? _feedbackPlayerInstance;
+  AudioPlayer? _celebrationPlayerInstance;
+  AudioPlayer? _musicPlayerInstance;
+
+  bool enabled;
   int? _musicRegion;
 
-  void select() => _play(_selectPlayer, 'audio/select.wav', volume: .28);
-  void target() => _play(_feedbackPlayer, 'audio/target.wav', volume: .55);
-  void bonus() => _play(_feedbackPlayer, 'audio/bonus.wav', volume: .48);
-  void invalid() => _play(_feedbackPlayer, 'audio/error.wav', volume: .42);
-  void combo() => _play(_celebrationPlayer, 'audio/combo.wav', volume: .52);
-  void victory() => _play(_celebrationPlayer, 'audio/victory.wav', volume: .64);
-  void chest() => _play(_celebrationPlayer, 'audio/chest.wav', volume: .62);
+  AudioPlayer get _selectPlayer =>
+      _selectPlayerInstance ??= AudioPlayer();
+  AudioPlayer get _feedbackPlayer =>
+      _feedbackPlayerInstance ??= AudioPlayer();
+  AudioPlayer get _celebrationPlayer =>
+      _celebrationPlayerInstance ??= AudioPlayer();
+  AudioPlayer get _musicPlayer =>
+      _musicPlayerInstance ??= AudioPlayer();
+
+  void select() {
+    if (!enabled) return;
+    _play(_selectPlayer, 'audio/select.wav', volume: .28);
+  }
+
+  void target() {
+    if (!enabled) return;
+    _play(_feedbackPlayer, 'audio/target.wav', volume: .55);
+  }
+
+  void bonus() {
+    if (!enabled) return;
+    _play(_feedbackPlayer, 'audio/bonus.wav', volume: .48);
+  }
+
+  void invalid() {
+    if (!enabled) return;
+    _play(_feedbackPlayer, 'audio/error.wav', volume: .42);
+  }
+
+  void combo() {
+    if (!enabled) return;
+    _play(_celebrationPlayer, 'audio/combo.wav', volume: .52);
+  }
+
+  void victory() {
+    if (!enabled) return;
+    _play(_celebrationPlayer, 'audio/victory.wav', volume: .64);
+  }
+
+  void chest() {
+    if (!enabled) return;
+    _play(_celebrationPlayer, 'audio/chest.wav', volume: .62);
+  }
 
   void playRegionTheme(int regionIndex) {
     if (!enabled || _musicRegion == regionIndex) return;
@@ -36,7 +74,10 @@ class AudioService {
 
   void stopRegionTheme() {
     _musicRegion = null;
-    unawaited(_musicPlayer.stop());
+    final player = _musicPlayerInstance;
+    if (player != null) {
+      unawaited(player.stop());
+    }
   }
 
   void setEnabled(bool value) {
@@ -45,7 +86,6 @@ class AudioService {
   }
 
   void _play(AudioPlayer player, String asset, {required double volume}) {
-    if (!enabled) return;
     unawaited(
       player.stop().then(
         (_) => player.play(AssetSource(asset), volume: volume),
@@ -54,11 +94,20 @@ class AudioService {
   }
 
   Future<void> dispose() async {
-    await Future.wait([
-      _selectPlayer.dispose(),
-      _feedbackPlayer.dispose(),
-      _celebrationPlayer.dispose(),
-      _musicPlayer.dispose(),
-    ]);
+    final players = <AudioPlayer>[
+      if (_selectPlayerInstance != null) _selectPlayerInstance!,
+      if (_feedbackPlayerInstance != null) _feedbackPlayerInstance!,
+      if (_celebrationPlayerInstance != null) _celebrationPlayerInstance!,
+      if (_musicPlayerInstance != null) _musicPlayerInstance!,
+    ];
+
+    if (players.isNotEmpty) {
+      await Future.wait(players.map((player) => player.dispose()));
+    }
+
+    _selectPlayerInstance = null;
+    _feedbackPlayerInstance = null;
+    _celebrationPlayerInstance = null;
+    _musicPlayerInstance = null;
   }
 }

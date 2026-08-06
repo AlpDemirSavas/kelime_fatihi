@@ -46,7 +46,7 @@ List<List<String>> _parseLevelTargetPayload(String text) {
 }
 
 class DictionaryService {
-  static const int maxLevel = 10000;
+  static const int maxLevel = 8000;
 
   final Set<String> _words = <String>{};
   final List<String> _dailyWords = <String>[];
@@ -155,7 +155,7 @@ class DictionaryService {
         );
       }
 
-      final expectedCount = _targetCount(index + 1);
+      final expectedCount = _targetCountForSeed(seed);
       final targets = row.skip(1).toList(growable: false);
       if (targets.length != expectedCount ||
           targets.toSet().length != targets.length ||
@@ -176,8 +176,8 @@ class DictionaryService {
   bool contains(String value) =>
       _words.contains(TurkishText.normalizeWord(value));
 
-  /// Yaygın kişi adlarını yalnız bonus doğrulamasında tanır. Bu havuz
-  /// `_words` veya `_levelWords` içine eklenmediği için hiçbir özel isim
+  /// Yaygın özel adları yalnız bonus doğrulamasında tanır. Bu havuz
+  /// `_words` veya `_levelWords` içine eklenmediği için hiçbir özel ad
   /// zorunlu bölüm hedefi ya da Günün Kelimesi cevabı olamaz.
   bool isProperName(String value) =>
       _properNames.contains(TurkishText.normalizeWord(value));
@@ -200,14 +200,14 @@ class DictionaryService {
     }
 
     final safeNumber = number.clamp(1, maxLevel).toInt();
-    // V7 has one prevalidated UNIQUE wheel signature per level for 1..10,000.
-    // Wheel size grows at the same boundaries as the mandatory target count.
+    // V11 has one prevalidated UNIQUE wheel signature per level for 1..8,000.
+    // Mandatory density follows wheel size while global reuse and spacing stay hard.
     final seed = _seedWords[safeNumber - 1];
     final seeded = Random(safeNumber * 7919 + 104729);
 
-    // V7 mandatory answers are precomputed globally. The optimizer sees the
-    // whole 10,000-level campaign at once, so it can reduce repeated answers,
-    // favor curated/frequent vocabulary and keep adjacent boards dissimilar.
+    // V11 mandatory answers are precomputed with global frequency + distance rules.
+    // Every target has a hard campaign-wide ceiling of 20 uses; 4+ letter words
+    // wait at least 20 levels and 3-letter words at least 30 levels before reuse.
     // This is deliberately not re-randomized at runtime.
     final selected = _levelTargets.isNotEmpty
         ? List<String>.from(_levelTargets[safeNumber - 1])
@@ -217,18 +217,26 @@ class DictionaryService {
     return ConquestLevel(number: safeNumber, letters: letters, words: selected);
   }
 
-  int _targetCount(int levelNumber) {
-    if (levelNumber < 100) return 5;
-    if (levelNumber < 1000) return 6;
-    if (levelNumber < 3000) return 7;
-    if (levelNumber < 5500) return 8;
-    if (levelNumber < 8000) return 9;
-    return 10;
+  int _targetCountForSeed(String seed) {
+    switch (seed.length) {
+      case 5:
+        return 5;
+      case 6:
+        return 6;
+      case 7:
+        return 6;
+      case 8:
+        return 7;
+      case 9:
+        return 6;
+      default:
+        return 5;
+    }
   }
 
   List<String> _fallbackTargets(String seed, int levelNumber, Random seeded) {
     final words = _subWordsFor(seed).toList();
-    final targetCount = _targetCount(levelNumber);
+    final targetCount = _targetCountForSeed(seed);
     final sameSignature = words
         .where((word) => _signature(word) == _signature(seed))
         .toList();

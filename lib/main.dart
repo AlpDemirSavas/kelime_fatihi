@@ -52,9 +52,31 @@ class KelimeFatihiApp extends StatefulWidget {
   State<KelimeFatihiApp> createState() => _KelimeFatihiAppState();
 }
 
-class _KelimeFatihiAppState extends State<KelimeFatihiApp> {
+class _KelimeFatihiAppState extends State<KelimeFatihiApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _syncSystemReduceMotion();
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    _syncSystemReduceMotion();
+  }
+
+  void _syncSystemReduceMotion() {
+    final features =
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
+    widget.controller.setSystemReduceMotion(
+      features.reduceMotion || features.disableAnimations,
+    );
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller.ads.dispose();
     widget.controller.purchases.dispose();
     widget.controller.account.dispose();
@@ -71,6 +93,16 @@ class _KelimeFatihiAppState extends State<KelimeFatihiApp> {
         debugShowCheckedModeBanner: false,
         title: 'Kelime Fatihi',
         theme: GameTheme.build(),
+        builder: (context, child) {
+          final game = GameScope.of(context);
+          final media = MediaQuery.of(context);
+          final reduceMotion =
+              game.effectiveReduceMotion || media.disableAnimations;
+          return MediaQuery(
+            data: media.copyWith(disableAnimations: reduceMotion),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         home: const HomeScreen(),
       ),
     );

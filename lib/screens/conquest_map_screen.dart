@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../core/game_theme.dart';
 import '../models/conquest_region.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/game_scope.dart';
@@ -31,12 +32,12 @@ class ConquestMapScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 72, 18, 30),
             children: [
               Text(
-                '10.000 bölümlük büyük sefer.',
+                '8.000 bölümlük büyük sefer.',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 6),
               Text(
-                'Her bölge 100 bölümden oluşur. İlk 10.000 bölümün harf çemberi imzası birbirinden farklıdır.',
+                'Her bölge 100 bölümden oluşur. 8.000 bölümün harf çemberi imzası birbirinden farklıdır.',
                 style: TextStyle(color: Colors.white.withValues(alpha: .62)),
               ),
               const SizedBox(height: 18),
@@ -67,8 +68,8 @@ class ConquestMapScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         game.campaignCompleted
-                            ? '10.000 bölümün tamamını fethettin. Bu gerçekten Kelime Fatihi seviyesi.'
-                            : 'Nihai hedef: Bölüm 10.000 • Kalan ${10000 - game.levelNumber + 1} bölüm',
+                            ? '8.000 bölümün tamamını fethettin. Bu gerçekten Kelime Fatihi seviyesi.'
+                            : 'Nihai hedef: Bölüm ${ConquestRegion.maxLevel} • Kalan ${ConquestRegion.maxLevel - game.levelNumber + 1} bölüm',
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
@@ -136,14 +137,40 @@ class _RegionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
-                  completed
-                      ? Icons.workspace_premium_rounded
-                      : locked
-                      ? Icons.lock_rounded
-                      : Icons.play_arrow_rounded,
-                  color: region.accent,
-                ),
+                if (completed)
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: .65, end: 1),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 520),
+                    curve: Curves.easeOutBack,
+                    builder: (context, scale, child) => Transform.scale(
+                      scale: scale,
+                      child: child,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: GameTheme.gold.withValues(alpha: .12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: GameTheme.gold.withValues(alpha: .18),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.workspace_premium_rounded,
+                        color: GameTheme.gold,
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    locked ? Icons.lock_rounded : Icons.play_arrow_rounded,
+                    color: region.accent,
+                  ),
               ],
             ),
             const SizedBox(height: 14),

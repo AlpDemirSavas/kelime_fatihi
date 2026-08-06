@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../controllers/game_controller.dart';
 import '../core/game_theme.dart';
 import '../core/turkish_text.dart';
@@ -20,7 +19,7 @@ class DailyScreen extends StatefulWidget {
   State<DailyScreen> createState() => _DailyScreenState();
 }
 
-class _DailyScreenState extends State<DailyScreen> {
+class _DailyScreenState extends State<DailyScreen> with WidgetsBindingObserver {
   String current = '';
   bool celebrate = false;
   bool _adsPrepared = false;
@@ -38,14 +37,41 @@ class _DailyScreenState extends State<DailyScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _now = DateTime.now());
+      unawaited(_refreshClock());
+    });
+  }
+
+  Future<void> _refreshClock() async {
+    if (!mounted) return;
+    final next = DateTime.now();
+    final dayChanged =
+        next.year != _now.year ||
+        next.month != _now.month ||
+        next.day != _now.day;
+
+    setState(() => _now = next);
+    if (!dayChanged) return;
+
+    final refreshed = await GameScope.of(context).refreshDailyStateIfNeeded();
+    if (!mounted || !refreshed) return;
+    setState(() {
+      current = '';
+      celebrate = false;
     });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshClock());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
     super.dispose();
   }
@@ -103,6 +129,9 @@ class _DailyScreenState extends State<DailyScreen> {
       extendBodyBehindAppBar: true,
       body: CelebrationOverlay(
         active: celebrate,
+        intensity: game.dailyPuzzleRewardMessage.isNotEmpty
+            ? CelebrationIntensity.milestone
+            : CelebrationIntensity.normal,
         child: AnimatedBackground(
           accent: GameTheme.mint,
           child: SafeArea(
@@ -246,6 +275,30 @@ class _DailyScreenState extends State<DailyScreen> {
                               ),
                             ],
                           ),
+                          if (game.dailyPuzzleRewardMessage.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: GameTheme.gold.withValues(alpha: .1),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: GameTheme.gold.withValues(alpha: .25),
+                                ),
+                              ),
+                              child: Text(
+                                game.dailyPuzzleRewardMessage,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: GameTheme.gold,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ],
                     ),
@@ -299,12 +352,12 @@ class _DailyScreenState extends State<DailyScreen> {
                   setState(
                     () => current = current.substring(0, current.length - 1),
                   );
-                  HapticFeedback.selectionClick();
+                  unawaited(game.hapticSelection());
                 },
                 onLongPress: () {
                   if (current.isEmpty) return;
                   setState(() => current = '');
-                  HapticFeedback.mediumImpact();
+                  unawaited(game.hapticMedium());
                 },
               ),
               const SizedBox(width: 10),
@@ -334,7 +387,7 @@ class _DailyScreenState extends State<DailyScreen> {
     // yeni kelime fikirleri deneyebilmek için hepsine tekrar basabilir.
     if (current.length >= 5) return;
     setState(() => current += letter);
-    HapticFeedback.selectionClick();
+    unawaited(game.hapticSelection());
     game.audio.select();
   }
 
@@ -367,7 +420,7 @@ class _DailyScreenState extends State<DailyScreen> {
     if (!mounted) return;
     if (error != null) {
       _toast(error);
-      HapticFeedback.heavyImpact();
+      unawaited(game.hapticHeavy());
       return;
     }
 
@@ -379,12 +432,12 @@ class _DailyScreenState extends State<DailyScreen> {
 
     if (justFinished) {
       if (game.dailyWon) {
-        HapticFeedback.mediumImpact();
+        unawaited(game.hapticMedium());
       } else {
-        HapticFeedback.heavyImpact();
+        unawaited(game.hapticHeavy());
       }
     } else {
-      HapticFeedback.lightImpact();
+      unawaited(game.hapticLight());
     }
 
     // Günlük tur yalnızca tamamlandığı anda bir kez reklam dener. Reklam hazır
@@ -415,7 +468,9 @@ class _DailyTile extends StatelessWidget {
       null => Colors.white.withValues(alpha: .055),
     };
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 280),
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 280),
       margin: const EdgeInsets.symmetric(horizontal: 3),
       width: 50,
       height: 50,

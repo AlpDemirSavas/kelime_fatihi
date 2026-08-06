@@ -1,4 +1,4 @@
-// Yaygın Türkçe kişi adları.
+// Yaygın özel adlar (kişi, coğrafya ve kültürel adlar).
 // Yalnız Sonsuz Fetih bonus doğrulamasında kullanılır; zorunlu hedef
 // havuzuna veya Günün Kelimesi sözlüğüne eklenmez.
 const Set<String> commonProperNames = <String>{
@@ -26,6 +26,7 @@ const Set<String> commonProperNames = <String>{
   'alican',
   'alihan',
   'almina',
+  'alya',
   'alp',
   'alper',
   'alperen',
@@ -41,6 +42,7 @@ const Set<String> commonProperNames = <String>{
   'ardacan',
   'arif',
   'arifcan',
+  'aras',
   'arzu',
   'asaf',
   'asel',
@@ -48,6 +50,7 @@ const Set<String> commonProperNames = <String>{
   'aslı',
   'aslıhan',
   'asuman',
+  'asya',
   'ataberk',
   'atakan',
   'atalay',
@@ -290,6 +293,7 @@ const Set<String> commonProperNames = <String>{
   'ezgi',
   'ezgisu',
   'ezra',
+  'fas',
   'fatih',
   'fatma',
   'ferahnur',
@@ -388,6 +392,7 @@ const Set<String> commonProperNames = <String>{
   'karatay',
   'kasım',
   'kaya',
+  'kayı',
   'kayra',
   'kazım',
   'kağan',
@@ -401,6 +406,7 @@ const Set<String> commonProperNames = <String>{
   'koray',
   'korhan',
   'kubilay',
+  'kuran',
   'kutay',
   'kutlu',
   'kübra',

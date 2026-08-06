@@ -1,0 +1,20 @@
+FINAL QUALITY CURATED TARGET POOL (bu kalite turunda seçilen 256 kelime)
+========================================================================
+
+3 HARFLİ (11)
+boa, dut, huy, jel, kor, lif, loş, nal, oya, tay, şal
+
+4 HARFLİ (48)
+afiş, aort, arpa, asal, baro, demo, efor, esin, eyer, eğik, eğim, fiil, folk, foto, güve, idol, ilik, imge, judo, kama, kene, klor, komi, kura, küme, kına, logo, meta, nene, obez, obur, olgu, oluk, opal, oyuk, ozon, pres, rest, semt, skeç, soba, süet, toka, veto, çapa, çile, ıska, şike
+
+5 HARFLİ (47)
+akort, baton, dalak, demeç, dizel, dobra, efekt, egzoz, enzim, fıtık, heyet, jeton, jokey, karat, ketum, kiler, kopuk, korse, larva, lokal, mecaz, muson, nazar, noter, pabuç, pedal, pikap, rampa, ranza, saten, sazan, sinüs, slayt, somun, söğüt, teras, tulum, turna, unsur, viral, vişne, yanak, yonca, yufka, çoğul, önder, şurup
+
+6 HARFLİ (48)
+afacan, anarşi, atölye, baraka, baypas, boykot, bulvar, buyruk, dantel, dingil, dürbün, etobur, fosfor, gazino, granit, gündem, içgüdü, kafiye, kayısı, kervan, klavye, krater, kumral, kıskaç, lityum, losyon, meltem, mercek, misket, nitrat, papyon, pinpon, portal, rövanş, rıhtım, sahici, sansür, sarmal, seyrek, sismik, statik, tanker, tırmık, ustura, vizyon, voltaj, öngörü, şalgam
+
+7 HARFLİ (49)
+ahududu, akustik, amonyak, arsenik, banliyö, bileşik, bulantı, buruşuk, engerek, enstitü, evcilik, fenomen, figüran, gırtlak, insülin, işletim, jeoloji, kaplıca, karizma, kasiyer, katalog, kelepir, kereviz, klarnet, kokarca, kripton, kuluçka, kırıntı, maliyet, maskara, menekşe, metafor, metalik, ortanca, patinaj, pelikan, semptom, sportif, sömestr, söyleşi, tekstil, tetanos, tramvay, turnike, tüketim, çıkıntı, üretken, ıspanak, şaheser
+
+8 HARFLİ (53)
+anayasal, arkeolog, başyapıt, damızlık, depozito, deterjan, değirmen, flamingo, gitarist, gösterge, hoparlör, huzurevi, idealist, ilkbahar, jandarma, kabarcık, kalıtsal, kapasite, karanfil, katedral, kemirgen, kilogram, kimyager, kirlilik, konsolos, kızılcık, lacivert, lunapark, malikane, mandarin, maydanoz, memleket, milenyum, mimarlık, nostalji, ormanlık, ortopedi, pansuman, paradoks, parşömen, plankton, sardalya, seferber, silahşor, simetrik, sırtüstü, turistik, ustabaşı, versiyon, yanardağ, yemyeşil, yumurcak, çilingir

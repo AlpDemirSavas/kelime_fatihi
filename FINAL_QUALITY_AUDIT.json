@@ -1,0 +1,212 @@
+{
+  "status": "PASS",
+  "errors": [],
+  "levels": 8000,
+  "unique_wheels": 8000,
+  "mandatory_total": 75201,
+  "mandatory_unique": 5554,
+  "max_repeat": 45,
+  "three_letter_total": 12250,
+  "max_three_per_level": 3,
+  "adjacent_target_overlap_max": 1,
+  "adjacent_wheels_ge75": 0,
+  "runtime_original": 27854,
+  "runtime_final": 27854,
+  "runtime_added": [
+    "admin",
+    "atel",
+    "iban",
+    "kobi",
+    "mesir",
+    "pile",
+    "sana"
+  ],
+  "runtime_removed": [
+    "anal",
+    "bira",
+    "der",
+    "iple",
+    "kanla",
+    "rakı",
+    "stop"
+  ],
+  "quality_round_promotions": 256,
+  "promotion_length_counts": {
+    "3": 11,
+    "4": 48,
+    "5": 47,
+    "6": 48,
+    "7": 49,
+    "8": 53
+  },
+  "map_names": 80,
+  "unique_map_names": 80,
+  "feedback_levels": {
+    "155": {
+      "seed": "nokta",
+      "targets": [
+        "nokta",
+        "kont",
+        "nota",
+        "toka",
+        "not",
+        "ton"
+      ]
+    },
+    "162": {
+      "seed": "stres",
+      "targets": [
+        "stres",
+        "rest",
+        "sert",
+        "ters",
+        "ses",
+        "set"
+      ]
+    },
+    "185": {
+      "seed": "sakız",
+      "targets": [
+        "sakız",
+        "kazı",
+        "kısa",
+        "azı",
+        "kaz",
+        "kız"
+      ]
+    },
+    "192": {
+      "seed": "taksi",
+      "targets": [
+        "taksi",
+        "aksi",
+        "asit",
+        "kast",
+        "kat",
+        "tas"
+      ]
+    }
+  },
+  "top_repeated": [
+    [
+      "anı",
+      45
+    ],
+    [
+      "kan",
+      45
+    ],
+    [
+      "kar",
+      45
+    ],
+    [
+      "ilet",
+      45
+    ],
+    [
+      "bel",
+      45
+    ],
+    [
+      "tel",
+      45
+    ],
+    [
+      "askı",
+      45
+    ],
+    [
+      "ıska",
+      45
+    ],
+    [
+      "acı",
+      45
+    ],
+    [
+      "kas",
+      45
+    ],
+    [
+      "yeni",
+      45
+    ],
+    [
+      "karat",
+      45
+    ],
+    [
+      "tarak",
+      45
+    ],
+    [
+      "kara",
+      45
+    ],
+    [
+      "kart",
+      45
+    ],
+    [
+      "ara",
+      45
+    ],
+    [
+      "nesil",
+      45
+    ],
+    [
+      "esin",
+      45
+    ],
+    [
+      "sel",
+      45
+    ],
+    [
+      "akım",
+      45
+    ],
+    [
+      "kat",
+      45
+    ],
+    [
+      "erin",
+      45
+    ],
+    [
+      "adam",
+      45
+    ],
+    [
+      "ada",
+      45
+    ],
+    [
+      "dal",
+      45
+    ],
+    [
+      "mal",
+      45
+    ],
+    [
+      "ekin",
+      45
+    ],
+    [
+      "eksi",
+      45
+    ],
+    [
+      "eski",
+      45
+    ],
+    [
+      "arpa",
+      45
+    ]
+  ]
+}

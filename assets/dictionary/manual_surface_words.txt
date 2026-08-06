@@ -1,2 +1,7 @@
 # Yalnızca sözlük başlığı olmayan, ayrıca elle onaylanmış yüzey biçimleri.
 # V6: zaman/kip çekimleri burada tutulmaz. Şimdilik ek istisna yok.
+
+# 2026-08 kullanıcı feedbacki: kabul edilir fakat zorunlu hedef yapılmaz
+admin
+mesir
+sana

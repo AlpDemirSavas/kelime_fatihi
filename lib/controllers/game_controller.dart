@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../core/turkish_text.dart';
 import '../models/chest_reward.dart';
+import '../models/competition.dart';
 import '../models/conquest_level.dart';
 import '../models/conquest_region.dart';
 import '../models/daily_mission.dart';
@@ -68,7 +69,18 @@ class GameController extends ChangeNotifier {
   bool isAdFree = false;
   bool cloudSyncing = false;
   String cloudStatusMessage = '';
+  int weeklyScore = 0;
+  int seasonScore = 0;
+  String competitionWeekKey = '';
+  String competitionSeasonKey = '';
+  bool socialEnabled = false;
+  bool socialSyncing = false;
+  String socialStatusMessage = '';
+  String friendCode = '';
+  String socialUsername = '';
+  String _socialOwnerUid = '';
   Timer? _cloudSyncTimer;
+  Timer? _socialSyncTimer;
   Timer? _heartTicker;
   Timer? _comboExpiryTimer;
 
@@ -78,6 +90,8 @@ class GameController extends ChangeNotifier {
   static const Duration comboWindow = Duration(seconds: 12);
   static const String _pendingLevelCompletionKey =
       'pending_level_completion_v1';
+  static const String _pendingDailyCompetitionKey =
+      'pending_daily_competition_v1';
 
   late ConquestLevel currentLevel;
   final Set<String> foundWords = <String>{};
@@ -102,6 +116,21 @@ class GameController extends ChangeNotifier {
   bool get signedIn => account.signedIn;
   String get accountName => account.displayName;
   String get accountEmail => account.email;
+  LeagueTier get currentLeague => LeagueTier.forScore(seasonScore);
+  double get leagueProgress {
+    final tier = currentLeague;
+    final next = tier.nextThreshold;
+    if (next == null) return 1;
+    final span = next - tier.lowerThreshold;
+    if (span <= 0) return 1;
+    return ((seasonScore - tier.lowerThreshold) / span).clamp(0.0, 1.0).toDouble();
+  }
+  int get regionProgress {
+    if (campaignCompleted) return ConquestRegion.regionSize;
+    return currentRegion.progressFor(levelNumber) - 1;
+  }
+  double get regionProgressRatio =>
+      (regionProgress / ConquestRegion.regionSize).clamp(0.0, 1.0).toDouble();
   List<String> get sortedBonusWords {
     final words = bonusWords.toList()..sort();
     return words;
@@ -147,6 +176,9 @@ class GameController extends ChangeNotifier {
     await _loadConquestState();
     await _recoverLegacyCompletedBoard();
     await account.initialize();
+    await _loadCompetitionState();
+    await _recoverPendingDailyCompetitionAward();
+    await _reconcileSocialOwnerAfterSignIn();
 
     // Ads and billing remain lazy. Core game, dictionary, missions, economy,
     // progression and sounds all work from bundled/local data while offline.
@@ -158,6 +190,7 @@ class GameController extends ChangeNotifier {
     notifyListeners();
     if (account.signedIn) {
       unawaited(syncCloudProgress());
+      if (socialEnabled) unawaited(syncSocialProfile());
     }
   }
 
@@ -487,7 +520,7 @@ class GameController extends ChangeNotifier {
   }
 
   Future<void> _migrateContentState() async {
-    const contentVersion = 16;
+    const contentVersion = 17;
     final storedVersion = await storage.getInt('content_version', 0);
     if (storedVersion >= contentVersion) return;
 
@@ -537,6 +570,12 @@ class GameController extends ChangeNotifier {
       await storage.setBool('hint_used_level', false);
       await storage.setInt('mistakes_this_level', 0);
       await storage.setString('hints_json', '{}');
+    }
+
+    if (storedVersion < 17) {
+      // V17 sosyal ligler ve görsel progression katmanıdır. Kampanya seed/target
+      // eşlemesi değişmediği için kullanıcının açık tahtasını, canını, parasını
+      // veya bulunduğu bölümü sıfırlamayız.
     }
 
     await storage.setInt('content_version', contentVersion);
@@ -695,6 +734,7 @@ class GameController extends ChangeNotifier {
       await storage.setInt('daily_wins', dailyWins);
       await storage.setInt('coins', coins);
       await _syncDailyPuzzleStreakForCompletedDay();
+      if (won) await _awardDailyCompetition();
     } else {
       if (normalized == dailyWord) {
         audio.target();
@@ -944,6 +984,7 @@ class GameController extends ChangeNotifier {
   Future<ChestReward?> completeLevel() async {
     if (campaignCompleted) return null;
     if (!currentLevel.words.every(foundWords.contains)) return null;
+    await _ensureCompetitionPeriods();
 
     // Bölüm sonucu ekrandan/reklamdan bağımsız olarak önce kalıcı hale gelir.
     // Journal, uygulama tam kayıt sırasında öldürülse bile işlemin aynı mutlak
@@ -957,6 +998,7 @@ class GameController extends ChangeNotifier {
     await storage.setString(_pendingLevelCompletionKey, '');
 
     _scheduleCloudSync();
+    _scheduleSocialSync();
     return _chestRewardFor(plan.nextLevelsCompleted);
   }
 
@@ -1014,6 +1056,11 @@ class GameController extends ChangeNotifier {
       );
     }
 
+    final competitionDelta = CompetitionScoring.levelCompletion(
+      bonusWords: bonusWords.length,
+      perfect: wasPerfect,
+    );
+
     return _LevelCompletionPlan(
       completedLevelNumber: completedLevelNumber,
       nextLevelNumber: nextLevelNumber,
@@ -1026,6 +1073,10 @@ class GameController extends ChangeNotifier {
       wasPerfect: wasPerfect,
       missionDateKey: dailyDateKey,
       missions: nextMissions,
+      socialWeekKey: competitionWeekKey,
+      socialSeasonKey: competitionSeasonKey,
+      nextWeeklyScore: weeklyScore + competitionDelta,
+      nextSeasonScore: seasonScore + competitionDelta,
     );
   }
 
@@ -1052,6 +1103,15 @@ class GameController extends ChangeNotifier {
     freeHints = plan.nextFreeHints;
     crownFragments = plan.nextCrownFragments;
     perfectConquests = plan.nextPerfectConquests;
+    if (plan.nextWeeklyScore != null &&
+        plan.nextSeasonScore != null &&
+        plan.socialWeekKey != null &&
+        plan.socialSeasonKey != null) {
+      weeklyScore = plan.nextWeeklyScore!;
+      seasonScore = plan.nextSeasonScore!;
+      competitionWeekKey = plan.socialWeekKey!;
+      competitionSeasonKey = plan.socialSeasonKey!;
+    }
     if (dailyDateKey == plan.missionDateKey) {
       dailyMissions = plan.missions;
     }
@@ -1088,6 +1148,9 @@ class GameController extends ChangeNotifier {
     await storage.setInt('crown_fragments', crownFragments);
     await storage.setInt('perfect_conquests', perfectConquests);
     await storage.setInt('mistakes_this_level', mistakesThisLevel);
+    if (plan.nextWeeklyScore != null) {
+      await _persistCompetitionState();
+    }
     await _persistMissions();
     await _persistConquest();
     notifyListeners();
@@ -1364,14 +1427,22 @@ class GameController extends ChangeNotifier {
 
   Future<String?> signInWithGoogle() async {
     final error = await account.signInWithGoogle();
-    if (error == null && account.signedIn) await syncCloudProgress();
+    if (error == null && account.signedIn) {
+      await _reconcileSocialOwnerAfterSignIn();
+      await syncCloudProgress();
+      if (socialEnabled) await syncSocialProfile();
+    }
     notifyListeners();
     return error;
   }
 
   Future<String?> signInWithApple() async {
     final error = await account.signInWithApple();
-    if (error == null && account.signedIn) await syncCloudProgress();
+    if (error == null && account.signedIn) {
+      await _reconcileSocialOwnerAfterSignIn();
+      await syncCloudProgress();
+      if (socialEnabled) await syncSocialProfile();
+    }
     notifyListeners();
     return error;
   }
@@ -1384,7 +1455,17 @@ class GameController extends ChangeNotifier {
 
   Future<String?> deleteAccount() async {
     final error = await account.deleteAccount();
-    if (error == null) cloudStatusMessage = '';
+    if (error == null) {
+      cloudStatusMessage = '';
+      socialEnabled = false;
+      friendCode = '';
+      socialUsername = '';
+      _socialOwnerUid = '';
+      await storage.setBool('social_enabled', false);
+      await storage.setString('social_friend_code', '');
+      await storage.setString('social_username', '');
+      await storage.setString('social_owner_uid', '');
+    }
     notifyListeners();
     return error;
   }
@@ -1477,9 +1558,262 @@ class GameController extends ChangeNotifier {
     });
   }
 
+  Future<void> _loadCompetitionState() async {
+    final now = DateTime.now();
+    competitionWeekKey = CompetitionPeriod.weekKey(now);
+    competitionSeasonKey = CompetitionPeriod.seasonKey(now);
+    final storedWeek = await storage.getString('competition_week_key');
+    final storedSeason = await storage.getString('competition_season_key');
+    weeklyScore = storedWeek == competitionWeekKey
+        ? await storage.getInt('competition_weekly_score', 0)
+        : 0;
+    seasonScore = storedSeason == competitionSeasonKey
+        ? await storage.getInt('competition_season_score', 0)
+        : 0;
+    socialEnabled = await storage.getBool('social_enabled', false);
+    friendCode = await storage.getString('social_friend_code') ?? '';
+    socialUsername = await storage.getString('social_username') ?? '';
+    _socialOwnerUid = await storage.getString('social_owner_uid') ?? '';
+    await _persistCompetitionState();
+  }
+
+  Future<void> _ensureCompetitionPeriods() async {
+    final now = DateTime.now();
+    final newWeek = CompetitionPeriod.weekKey(now);
+    final newSeason = CompetitionPeriod.seasonKey(now);
+    var changed = false;
+    if (competitionWeekKey != newWeek) {
+      competitionWeekKey = newWeek;
+      weeklyScore = 0;
+      changed = true;
+    }
+    if (competitionSeasonKey != newSeason) {
+      competitionSeasonKey = newSeason;
+      seasonScore = 0;
+      changed = true;
+    }
+    if (changed) await _persistCompetitionState();
+  }
+
+  Future<void> _persistCompetitionState() async {
+    await storage.setString('competition_week_key', competitionWeekKey);
+    await storage.setString('competition_season_key', competitionSeasonKey);
+    await storage.setInt('competition_weekly_score', weeklyScore);
+    await storage.setInt('competition_season_score', seasonScore);
+  }
+
+  Future<void> _reconcileSocialOwnerAfterSignIn() async {
+    if (!account.signedIn) return;
+    final currentUid = account.uid;
+    if (_socialOwnerUid.isEmpty) return;
+    if (_socialOwnerUid == currentUid) return;
+
+    // Aynı cihazda başka hesaba geçilirse önceki oyuncunun haftalık/seasonal
+    // puanı yeni hesaba taşınmaz.
+    weeklyScore = 0;
+    seasonScore = 0;
+    socialEnabled = false;
+    friendCode = '';
+    socialUsername = '';
+    _socialOwnerUid = '';
+    await _persistCompetitionState();
+    await storage.setBool('social_enabled', false);
+    await storage.setString('social_friend_code', '');
+    await storage.setString('social_username', '');
+    await storage.setString('social_owner_uid', '');
+  }
+
+  Future<String> resolveSocialUsername() async {
+    if (!account.signedIn) return '';
+    if (_socialOwnerUid == account.uid && socialUsername.isNotEmpty) {
+      return socialUsername;
+    }
+    final remote = await account.loadSocialUsername();
+    if (remote == null || remote.isEmpty) return '';
+    socialUsername = remote;
+    _socialOwnerUid = account.uid;
+    await storage.setString('social_username', socialUsername);
+    await storage.setString('social_owner_uid', _socialOwnerUid);
+    notifyListeners();
+    return socialUsername;
+  }
+
+  Future<String?> joinSocialCompetition({String? username}) async {
+    if (!account.signedIn) {
+      return 'Haftalık lige katılmak için hesabınla giriş yapmalısın.';
+    }
+    await _ensureCompetitionPeriods();
+
+    final usernameResult = await account.ensureSocialUsername(
+      requestedUsername: username,
+    );
+    if (!usernameResult.success) return usernameResult.error;
+
+    final currentUid = account.uid;
+    if (_socialOwnerUid.isNotEmpty && _socialOwnerUid != currentUid) {
+      weeklyScore = 0;
+      seasonScore = 0;
+      friendCode = '';
+    }
+    _socialOwnerUid = currentUid;
+    socialUsername = usernameResult.username!;
+    socialEnabled = true;
+    await storage.setString('social_owner_uid', currentUid);
+    await storage.setString('social_username', socialUsername);
+    await storage.setBool('social_enabled', true);
+    await _persistCompetitionState();
+
+    final synced = await syncSocialProfile();
+    if (!synced) {
+      // Benzersiz Fatih adı sunucuda başarıyla rezerve edildiyse kullanıcıdan
+      // tekrar ad istemeyiz. Profil senkronu geçici olarak başarısız olsa bile
+      // skor cihazda kalır ve sonraki yenilemede yeniden gönderilir.
+      socialStatusMessage = 'Fatih adın kaydedildi • Lig senkronu bekliyor';
+    }
+    notifyListeners();
+    return null;
+  }
+
+  Future<String?> leaveSocialCompetition() async {
+    if (account.signedIn) {
+      final error = await account.leaveSocialCompetition();
+      if (error != null) return error;
+    }
+    socialEnabled = false;
+    friendCode = '';
+    await storage.setBool('social_enabled', false);
+    await storage.setString('social_friend_code', '');
+    socialStatusMessage = 'Sosyal sıralamadan ayrıldın.';
+    notifyListeners();
+    return null;
+  }
+
+  Future<bool> syncSocialProfile() async {
+    if (!socialEnabled || !account.signedIn || socialSyncing) return false;
+    await _ensureCompetitionPeriods();
+    if (socialUsername.isEmpty) {
+      final remoteUsername = await account.loadSocialUsername();
+      if (remoteUsername == null || remoteUsername.isEmpty) {
+        socialStatusMessage = 'Lige devam etmek için Fatih adını seç';
+        notifyListeners();
+        return false;
+      }
+      socialUsername = remoteUsername;
+      _socialOwnerUid = account.uid;
+      await storage.setString('social_username', socialUsername);
+      await storage.setString('social_owner_uid', _socialOwnerUid);
+    }
+    socialSyncing = true;
+    notifyListeners();
+    try {
+      final result = await account.syncSocialProfile(
+        weeklyScore: weeklyScore,
+        seasonScore: seasonScore,
+        weekKey: competitionWeekKey,
+        seasonKey: competitionSeasonKey,
+        levelNumber: displayLevel,
+        perfectConquests: perfectConquests,
+      );
+      if (result == null || result.friendCode.isEmpty) {
+        socialStatusMessage = 'Lig senkronu bekliyor';
+        return false;
+      }
+      friendCode = result.friendCode;
+      weeklyScore = max(weeklyScore, result.weeklyScore);
+      seasonScore = max(seasonScore, result.seasonScore);
+      await _persistCompetitionState();
+      await storage.setString('social_friend_code', friendCode);
+      socialStatusMessage = 'Lig puanın güncel';
+      return true;
+    } finally {
+      socialSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<LeaderboardEntry>> loadWeeklyLeaderboard() async {
+    await _ensureCompetitionPeriods();
+    if (socialEnabled) await syncSocialProfile();
+    return account.loadWeeklyLeaderboard(competitionWeekKey);
+  }
+
+  Future<List<LeaderboardEntry>> loadSeasonLeaderboard() async {
+    await _ensureCompetitionPeriods();
+    if (socialEnabled) await syncSocialProfile();
+    return account.loadSeasonLeaderboard(competitionSeasonKey);
+  }
+
+  Future<List<LeaderboardEntry>> loadFriendLeaderboard() async {
+    await _ensureCompetitionPeriods();
+    if (socialEnabled) await syncSocialProfile();
+    return account.loadFriendLeaderboard(competitionWeekKey);
+  }
+
+  Future<String?> addFriendByCode(String code) async {
+    if (!socialEnabled) return 'Önce haftalık lige katılmalısın.';
+    return account.addFriendByCode(code);
+  }
+
+  Future<void> removeFriend(String uid) => account.removeFriend(uid);
+
+  Future<void> _awardDailyCompetition() async {
+    await _ensureCompetitionPeriods();
+    final lastDate = await storage.getString('competition_daily_scored_date');
+    if (lastDate == dailyDateKey) return;
+
+    final plan = <String, dynamic>{
+      'date': dailyDateKey,
+      'week_key': competitionWeekKey,
+      'season_key': competitionSeasonKey,
+      'weekly_score': weeklyScore + CompetitionScoring.dailyWin,
+      'season_score': seasonScore + CompetitionScoring.dailyWin,
+    };
+    await storage.setString(_pendingDailyCompetitionKey, jsonEncode(plan));
+    await _applyDailyCompetitionAward(plan);
+    await storage.setString(_pendingDailyCompetitionKey, '');
+    _scheduleSocialSync();
+  }
+
+  Future<void> _recoverPendingDailyCompetitionAward() async {
+    final raw = await storage.getString(_pendingDailyCompetitionKey);
+    if (raw == null || raw.trim().isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        await _applyDailyCompetitionAward(decoded);
+      }
+    } catch (_) {
+      // Bozuk sosyal journal oyun açılışını engellemez.
+    }
+    await storage.setString(_pendingDailyCompetitionKey, '');
+  }
+
+  Future<void> _applyDailyCompetitionAward(Map<String, dynamic> plan) async {
+    final date = plan['date'] as String? ?? '';
+    if (date.isEmpty) return;
+    final lastDate = await storage.getString('competition_daily_scored_date');
+    if (lastDate == date) return;
+    competitionWeekKey = plan['week_key'] as String? ?? competitionWeekKey;
+    competitionSeasonKey =
+        plan['season_key'] as String? ?? competitionSeasonKey;
+    weeklyScore = (plan['weekly_score'] as num?)?.toInt() ?? weeklyScore;
+    seasonScore = (plan['season_score'] as num?)?.toInt() ?? seasonScore;
+    await _persistCompetitionState();
+    await storage.setString('competition_daily_scored_date', date);
+  }
+
+  void _scheduleSocialSync() {
+    if (!socialEnabled || !account.signedIn) return;
+    _socialSyncTimer?.cancel();
+    _socialSyncTimer = Timer(const Duration(seconds: 2), () {
+      unawaited(syncSocialProfile());
+    });
+  }
+
   @override
   void dispose() {
     _cloudSyncTimer?.cancel();
+    _socialSyncTimer?.cancel();
     _heartTicker?.cancel();
     _comboExpiryTimer?.cancel();
     super.dispose();
@@ -1508,6 +1842,10 @@ class _LevelCompletionPlan {
     required this.wasPerfect,
     required this.missionDateKey,
     required this.missions,
+    this.socialWeekKey,
+    this.socialSeasonKey,
+    this.nextWeeklyScore,
+    this.nextSeasonScore,
   });
 
   final int completedLevelNumber;
@@ -1521,8 +1859,12 @@ class _LevelCompletionPlan {
   final bool wasPerfect;
   final String missionDateKey;
   final List<DailyMission> missions;
+  final String? socialWeekKey;
+  final String? socialSeasonKey;
+  final int? nextWeeklyScore;
+  final int? nextSeasonScore;
 
-  Map<String, Object> toJson() => {
+  Map<String, Object?> toJson() => {
     'completed_level_number': completedLevelNumber,
     'next_level_number': nextLevelNumber,
     'next_levels_completed': nextLevelsCompleted,
@@ -1534,6 +1876,10 @@ class _LevelCompletionPlan {
     'was_perfect': wasPerfect,
     'mission_date_key': missionDateKey,
     'missions': missions.map((mission) => mission.toJson()).toList(),
+    'social_week_key': socialWeekKey,
+    'social_season_key': socialSeasonKey,
+    'next_weekly_score': nextWeeklyScore,
+    'next_season_score': nextSeasonScore,
   };
 
   factory _LevelCompletionPlan.fromJson(Map<String, dynamic> json) {
@@ -1563,6 +1909,10 @@ class _LevelCompletionPlan {
       wasPerfect: json['was_perfect'] as bool? ?? false,
       missionDateKey: json['mission_date_key'] as String? ?? '',
       missions: missions,
+      socialWeekKey: json['social_week_key'] as String?,
+      socialSeasonKey: json['social_season_key'] as String?,
+      nextWeeklyScore: (json['next_weekly_score'] as num?)?.toInt(),
+      nextSeasonScore: (json['next_season_score'] as num?)?.toInt(),
     );
   }
 }

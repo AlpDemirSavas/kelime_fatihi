@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
+import '../models/competition.dart';
+
+class _UsernameTakenException implements Exception {
+  const _UsernameTakenException();
+}
 
 class AccountService extends ChangeNotifier {
   AccountService({required this.firebaseReady});
@@ -16,10 +23,17 @@ class AccountService extends ChangeNotifier {
   bool get available => firebaseReady;
   User? get user => firebaseReady ? FirebaseAuth.instance.currentUser : null;
   bool get signedIn => user != null;
+  String get uid => user?.uid ?? '';
   String get displayName => user?.displayName?.trim().isNotEmpty == true
       ? user!.displayName!.trim()
       : (user?.email ?? 'Kelime Fatihi');
   String get email => user?.email ?? '';
+  String get suggestedSocialUsername {
+    final value = user?.displayName?.trim() ?? '';
+    if (value.isEmpty) return '';
+    final candidate = UsernameRules.sanitizeDisplay(value);
+    return UsernameRules.validate(candidate) == null ? candidate : '';
+  }
 
   Future<void> initialize() async {
     if (!firebaseReady) return;
@@ -134,10 +148,309 @@ class AccountService extends ChangeNotifier {
     }
   }
 
+  Future<String?> loadSocialUsername() async {
+    final current = user;
+    if (current == null) return null;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('username_owners')
+          .doc(current.uid)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 5));
+      final value = snapshot.data()?['displayName'] as String?;
+      final cleaned = UsernameRules.sanitizeDisplay(value ?? '');
+      return cleaned.isEmpty ? null : cleaned;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<UsernameClaimResult> ensureSocialUsername({
+    String? requestedUsername,
+  }) async {
+    final current = user;
+    if (current == null) {
+      return const UsernameClaimResult(
+        error: 'Fatih adı seçmek için hesabınla giriş yapmalısın.',
+      );
+    }
+
+    final existing = await loadSocialUsername();
+    if (existing != null && existing.isNotEmpty) {
+      return UsernameClaimResult(username: existing);
+    }
+
+    final requested = UsernameRules.sanitizeDisplay(requestedUsername ?? '');
+    final validationError = UsernameRules.validate(requested);
+    if (validationError != null) {
+      return UsernameClaimResult(error: validationError);
+    }
+
+    final normalized = UsernameRules.normalize(requested);
+    final db = FirebaseFirestore.instance;
+    final usernameRef = db.collection('usernames').doc(normalized);
+    final ownerRef = db.collection('username_owners').doc(current.uid);
+
+    try {
+      final claimedName = await db
+          .runTransaction<String>((transaction) async {
+            // Aynı hesap farklı cihazdan eşzamanlı katılırsa ilk başarılı
+            // rezervasyon kazanır; kullanıcıdan ikinci kez ad istenmez.
+            final ownerSnapshot = await transaction.get(ownerRef);
+            final ownerData = ownerSnapshot.data();
+            final ownerName = UsernameRules.sanitizeDisplay(
+              ownerData?['displayName'] as String? ?? '',
+            );
+            if (ownerName.isNotEmpty) return ownerName;
+
+            final usernameSnapshot = await transaction.get(usernameRef);
+            if (usernameSnapshot.exists) {
+              final reservedUid = usernameSnapshot.data()?['uid'] as String?;
+              if (reservedUid != current.uid) {
+                throw const _UsernameTakenException();
+              }
+            } else {
+              transaction.set(usernameRef, <String, dynamic>{
+                'uid': current.uid,
+                'displayName': requested,
+                'normalized': normalized,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+            }
+
+            transaction.set(ownerRef, <String, dynamic>{
+              'uid': current.uid,
+              'displayName': requested,
+              'normalized': normalized,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+            return requested;
+          })
+          .timeout(const Duration(seconds: 7));
+      return UsernameClaimResult(username: claimedName);
+    } on _UsernameTakenException {
+      return const UsernameClaimResult(
+        error: 'Bu Fatih adı daha önce alınmış. Başka bir ad seç.',
+      );
+    } catch (_) {
+      return const UsernameClaimResult(
+        error: 'Fatih adı doğrulanamadı. İnternet bağlantını kontrol edip tekrar dene.',
+      );
+    }
+  }
+
+  Future<SocialSyncResult?> syncSocialProfile({
+    required int weeklyScore,
+    required int seasonScore,
+    required String weekKey,
+    required String seasonKey,
+    required int levelNumber,
+    required int perfectConquests,
+  }) async {
+    final current = user;
+    if (current == null) return null;
+
+    try {
+      final friendCode = await _ensureFriendCode(current.uid);
+      var mergedWeekly = weeklyScore;
+      var mergedSeason = seasonScore;
+      final profileRef = FirebaseFirestore.instance
+          .collection('social_profiles')
+          .doc(current.uid);
+      final publicName = await loadSocialUsername();
+      if (publicName == null || publicName.isEmpty) return null;
+      final usernameNormalized = UsernameRules.normalize(publicName);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(profileRef);
+        final data = snapshot.data() ?? const <String, dynamic>{};
+        final oldWeekKey = data['weekKey'] as String? ?? '';
+        final oldSeasonKey = data['seasonKey'] as String? ?? '';
+        final oldWeeklyScore = (data['weeklyScore'] as num?)?.toInt() ?? 0;
+        final oldSeasonScore = (data['seasonScore'] as num?)?.toInt() ?? 0;
+
+        mergedWeekly = oldWeekKey == weekKey
+            ? max(oldWeeklyScore, weeklyScore)
+            : weeklyScore;
+        mergedSeason = oldSeasonKey == seasonKey
+            ? max(oldSeasonScore, seasonScore)
+            : seasonScore;
+
+        transaction.set(profileRef, <String, dynamic>{
+          'uid': current.uid,
+          'displayName': publicName,
+          'usernameNormalized': usernameNormalized,
+          'friendCode': friendCode,
+          'weekKey': weekKey,
+          'weeklyScore': mergedWeekly,
+          'seasonKey': seasonKey,
+          'seasonScore': mergedSeason,
+          'levelNumber': levelNumber,
+          'perfectConquests': perfectConquests,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'socialSchemaVersion': 2,
+        }, SetOptions(merge: true));
+      }).timeout(const Duration(seconds: 6));
+      return SocialSyncResult(
+        friendCode: friendCode,
+        weeklyScore: mergedWeekly,
+        seasonScore: mergedSeason,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<LeaderboardEntry>> loadWeeklyLeaderboard(String weekKey) async {
+    if (!signedIn) return const <LeaderboardEntry>[];
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('social_profiles')
+          .where('weekKey', isEqualTo: weekKey)
+          .orderBy('weeklyScore', descending: true)
+          .limit(50)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 6));
+      return snapshot.docs
+          .map((doc) => LeaderboardEntry.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (_) {
+      return const <LeaderboardEntry>[];
+    }
+  }
+
+  Future<List<LeaderboardEntry>> loadSeasonLeaderboard(
+    String seasonKey,
+  ) async {
+    if (!signedIn) return const <LeaderboardEntry>[];
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('social_profiles')
+          .where('seasonKey', isEqualTo: seasonKey)
+          .orderBy('seasonScore', descending: true)
+          .limit(50)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 6));
+      return snapshot.docs
+          .map((doc) => LeaderboardEntry.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (_) {
+      return const <LeaderboardEntry>[];
+    }
+  }
+
+  Future<List<LeaderboardEntry>> loadFriendLeaderboard(String weekKey) async {
+    final current = user;
+    if (current == null) return const <LeaderboardEntry>[];
+    try {
+      final friends = await FirebaseFirestore.instance
+          .collection('friendships')
+          .doc(current.uid)
+          .collection('members')
+          .limit(30)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 6));
+
+      final ids = <String>{current.uid, ...friends.docs.map((doc) => doc.id)};
+      final entries = await Future.wait(
+        ids.map((uid) async {
+          try {
+            final profile = await FirebaseFirestore.instance
+                .collection('social_profiles')
+                .doc(uid)
+                .get(const GetOptions(source: Source.serverAndCache))
+                .timeout(const Duration(seconds: 4));
+            final data = profile.data();
+            if (data == null || (data['weekKey'] as String? ?? '') != weekKey) {
+              return null;
+            }
+            return LeaderboardEntry.fromMap(profile.id, data);
+          } catch (_) {
+            return null;
+          }
+        }),
+      );
+      final result = entries.whereType<LeaderboardEntry>().toList()
+        ..sort((a, b) => b.weeklyScore.compareTo(a.weeklyScore));
+      return result;
+    } catch (_) {
+      return const <LeaderboardEntry>[];
+    }
+  }
+
+  Future<String?> addFriendByCode(String rawCode) async {
+    final current = user;
+    if (current == null) return 'Arkadaş eklemek için hesabınla giriş yapmalısın.';
+    final code = rawCode.trim().toUpperCase().replaceAll(' ', '');
+    if (code.isEmpty) return 'Arkadaş kodunu yaz.';
+
+    try {
+      final codeDoc = await FirebaseFirestore.instance
+          .collection('friend_codes')
+          .doc(code)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 5));
+      final friendUid = codeDoc.data()?['uid'] as String?;
+      if (friendUid == null || friendUid.isEmpty) {
+        return 'Bu arkadaş kodu bulunamadı.';
+      }
+      if (friendUid == current.uid) return 'Kendi arkadaş kodunu ekleyemezsin.';
+
+      final profile = await FirebaseFirestore.instance
+          .collection('social_profiles')
+          .doc(friendUid)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 5));
+      if (!profile.exists) return 'Bu oyuncu sosyal sıralamaya katılmamış.';
+
+      await FirebaseFirestore.instance
+          .collection('friendships')
+          .doc(current.uid)
+          .collection('members')
+          .doc(friendUid)
+          .set(<String, dynamic>{
+            'friendUid': friendUid,
+            'createdAt': FieldValue.serverTimestamp(),
+          })
+          .timeout(const Duration(seconds: 5));
+      return null;
+    } catch (_) {
+      return 'Arkadaş eklenemedi. İnternet bağlantını kontrol edip tekrar dene.';
+    }
+  }
+
+  Future<void> removeFriend(String friendUid) async {
+    final current = user;
+    if (current == null || friendUid.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('friendships')
+          .doc(current.uid)
+          .collection('members')
+          .doc(friendUid)
+          .delete()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
+  Future<String?> leaveSocialCompetition() async {
+    final current = user;
+    if (current == null) return null;
+    final deleted = await _deleteSocialData(current.uid, deleteUsername: false);
+    return deleted
+        ? null
+        : 'Lig profili silinemedi. İnternet bağlantını kontrol edip tekrar dene.';
+  }
+
   Future<String?> deleteAccount() async {
     final current = user;
     if (current == null) return null;
     try {
+      final socialDeleted = await _deleteSocialData(current.uid, deleteUsername: true);
+      if (!socialDeleted) {
+        return 'Sosyal lig verileri silinemedi. İnternet bağlantını kontrol edip tekrar dene.';
+      }
+
       // Apple, Sign in with Apple kullanan uygulamalarda hesap silinirken
       // yetkilendirme token'ının da iptal edilmesini ister. Firebase bu işlem
       // için yeni bir Apple authorization code ile revoke API'si sunar.
@@ -176,6 +489,134 @@ class AccountService extends ChangeNotifier {
       return _friendlyFirebaseError(e);
     } catch (_) {
       return 'Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene.';
+    }
+  }
+
+  Future<String> _ensureFriendCode(String uid) async {
+    final profileRef = FirebaseFirestore.instance
+        .collection('social_profiles')
+        .doc(uid);
+    try {
+      final profile = await profileRef
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 4));
+      final existing = profile.data()?['friendCode'] as String?;
+      if (existing != null && existing.isNotEmpty) return existing;
+    } catch (_) {}
+
+    for (var salt = 0; salt < 8; salt++) {
+      final code = _friendCodeFor(uid, salt);
+      final codeRef = FirebaseFirestore.instance.collection('friend_codes').doc(code);
+      try {
+        final claimed = await FirebaseFirestore.instance
+            .runTransaction<bool>((transaction) async {
+              final snapshot = await transaction.get(codeRef);
+              if (snapshot.exists) {
+                return snapshot.data()?['uid'] == uid;
+              }
+              transaction.set(codeRef, <String, dynamic>{
+                'uid': uid,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+              return true;
+            })
+            .timeout(const Duration(seconds: 5));
+        if (claimed) return code;
+      } catch (_) {}
+    }
+    throw StateError('Arkadaş kodu oluşturulamadı.');
+  }
+
+  String _friendCodeFor(String uid, int salt) {
+    const offset = 1469598103934665603;
+    const prime = 1099511628211;
+    const mask = 0x7FFFFFFFFFFFFFFF;
+    var hash = offset;
+    for (final unit in '$uid:$salt'.codeUnits) {
+      hash ^= unit;
+      hash = (hash * prime) & mask;
+    }
+    final raw = hash.toRadixString(36).toUpperCase().padLeft(10, '0');
+    return 'KF-${raw.substring(raw.length - 8)}';
+  }
+
+  Future<bool> _deleteSocialData(
+    String uid, {
+    required bool deleteUsername,
+  }) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      final profileRef = db.collection('social_profiles').doc(uid);
+      final ownerRef = db.collection('username_owners').doc(uid);
+      final results = await Future.wait([
+        profileRef
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 4)),
+        ownerRef
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 4)),
+        db
+            .collection('friendships')
+            .doc(uid)
+            .collection('members')
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 5)),
+      ]);
+      final profile = results[0] as DocumentSnapshot<Map<String, dynamic>>;
+      final owner = results[1] as DocumentSnapshot<Map<String, dynamic>>;
+      final members = results[2] as QuerySnapshot<Map<String, dynamic>>;
+      final friendCode = profile.data()?['friendCode'] as String?;
+      final normalized = owner.data()?['normalized'] as String?;
+      final friendCodesToDelete = <String>{};
+      if (friendCode != null && friendCode.isNotEmpty) {
+        friendCodesToDelete.add(friendCode);
+      } else if (deleteUsername && owner.exists) {
+        // Profil yazılmadan önce bağlantı kopmuş olsa bile hesap silme,
+        // deterministic olarak ayrılmış olabilecek arkadaş kodunu geride bırakmaz.
+        final candidates = List<String>.generate(
+          8,
+          (salt) => _friendCodeFor(uid, salt),
+        );
+        final snapshots = await Future.wait(
+          candidates.map((candidate) async {
+            try {
+              return await db
+                  .collection('friend_codes')
+                  .doc(candidate)
+                  .get(const GetOptions(source: Source.serverAndCache))
+                  .timeout(const Duration(seconds: 2));
+            } catch (_) {
+              return null;
+            }
+          }),
+        );
+        for (var index = 0; index < snapshots.length; index++) {
+          if (snapshots[index]?.data()?['uid'] == uid) {
+            friendCodesToDelete.add(candidates[index]);
+          }
+        }
+      }
+
+      final batch = db.batch();
+      for (final doc in members.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(profileRef);
+      for (final code in friendCodesToDelete) {
+        batch.delete(db.collection('friend_codes').doc(code));
+      }
+
+      // Ligden çıkmak kullanıcı adını serbest bırakmaz. Böylece oyuncu aynı
+      // hesapla geri geldiğinde ikinci kez ad seçmez ve başka biri adı alamaz.
+      // Tam hesap silmede ise rezervasyon da kaldırılır.
+      if (deleteUsername && normalized != null && normalized.isNotEmpty) {
+        batch.delete(db.collection('usernames').doc(normalized));
+        batch.delete(ownerRef);
+      }
+      await batch.commit().timeout(const Duration(seconds: 6));
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

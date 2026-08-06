@@ -10,6 +10,7 @@ import 'account_screen.dart';
 import 'conquest_map_screen.dart';
 import 'conquest_screen.dart';
 import 'daily_screen.dart';
+import 'leaderboard_screen.dart';
 import 'missions_screen.dart';
 import 'stats_screen.dart';
 import 'store_screen.dart';
@@ -28,6 +29,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       bottomNavigationBar: _HomeBottomBar(
         onMap: () => _open(context, const ConquestMapScreen()),
+        onLeague: () => _open(context, const LeaderboardScreen()),
         onStore: () => _open(context, const StoreScreen()),
         onStats: () => _open(context, const StatsScreen()),
         onAccount: () => _open(context, const AccountScreen()),
@@ -132,6 +134,27 @@ class HomeScreen extends StatelessWidget {
                           ? '8.000/8.000'
                           : 'Bölüm ${game.levelNumber}',
                       onTap: () => _open(context, const ConquestScreen()),
+                    ),
+                    const SizedBox(height: 12),
+                    _ConquestProgressCard(
+                      regionName: region.name,
+                      regionEmoji: region.emoji,
+                      accent: region.accent,
+                      progress: game.regionProgress,
+                      ratio: game.regionProgressRatio,
+                      crowns: game.crownsUnlocked,
+                      treasureProgress: game.bonusTreasureProgress,
+                      onTap: () => _open(context, const ConquestMapScreen()),
+                    ),
+                    const SizedBox(height: 12),
+                    _LeaguePreviewCard(
+                      signedIn: game.signedIn,
+                      enabled: game.socialEnabled,
+                      leagueEmoji: game.currentLeague.emoji,
+                      leagueName: game.currentLeague.title,
+                      weeklyScore: game.weeklyScore,
+                      seasonScore: game.seasonScore,
+                      onTap: () => _open(context, const LeaderboardScreen()),
                     ),
                     const SizedBox(height: 12),
                     GlassCard(
@@ -391,15 +414,168 @@ class _ModeCard extends StatelessWidget {
   }
 }
 
+class _ConquestProgressCard extends StatelessWidget {
+  const _ConquestProgressCard({
+    required this.regionName,
+    required this.regionEmoji,
+    required this.accent,
+    required this.progress,
+    required this.ratio,
+    required this.crowns,
+    required this.treasureProgress,
+    required this.onTap,
+  });
+
+  final String regionName;
+  final String regionEmoji;
+  final Color accent;
+  final int progress;
+  final double ratio;
+  final int crowns;
+  final int treasureProgress;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (ratio * 100).round();
+    return GlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent.withValues(alpha: .12),
+                  border: Border.all(color: accent.withValues(alpha: .3)),
+                ),
+                child: Text(regionEmoji, style: const TextStyle(fontSize: 23)),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$regionName • %$percent',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$progress/100 fethedildi • 👑 $crowns taç • ⭐ $treasureProgress/25 hazine',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .55),
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: accent),
+            ],
+          ),
+          const SizedBox(height: 11),
+          LinearProgressIndicator(
+            value: ratio,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(99),
+            color: accent,
+            backgroundColor: Colors.white.withValues(alpha: .08),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaguePreviewCard extends StatelessWidget {
+  const _LeaguePreviewCard({
+    required this.signedIn,
+    required this.enabled,
+    required this.leagueEmoji,
+    required this.leagueName,
+    required this.weeklyScore,
+    required this.seasonScore,
+    required this.onTap,
+  });
+
+  final bool signedIn;
+  final bool enabled;
+  final String leagueEmoji;
+  final String leagueName;
+  final int weeklyScore;
+  final int seasonScore;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = !signedIn
+        ? 'Giriş yap, haftalık sıralamada yarış ve arkadaşlarını ekle.'
+        : !enabled
+        ? 'Haftalık sıralama, arkadaş skorları ve sezon ligine katıl.'
+        : 'Hafta $weeklyScore puan • Sezon $seasonScore puan';
+    return GlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: GameTheme.gold.withValues(alpha: .12),
+            ),
+            child: Text(enabled ? leagueEmoji : '🏆', style: const TextStyle(fontSize: 25)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  enabled ? '$leagueName Ligi' : 'Fatihler Ligi',
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .58),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: GameTheme.gold),
+        ],
+      ),
+    );
+  }
+}
+
 class _HomeBottomBar extends StatelessWidget {
   const _HomeBottomBar({
     required this.onMap,
+    required this.onLeague,
     required this.onStore,
     required this.onStats,
     required this.onAccount,
   });
 
   final VoidCallback onMap;
+  final VoidCallback onLeague;
   final VoidCallback onStore;
   final VoidCallback onStats;
   final VoidCallback onAccount;
@@ -430,6 +606,13 @@ class _HomeBottomBar extends StatelessWidget {
                 icon: Icons.map_rounded,
                 label: 'Harita',
                 onTap: onMap,
+              ),
+            ),
+            Expanded(
+              child: _BottomItem(
+                icon: Icons.emoji_events_rounded,
+                label: 'Lig',
+                onTap: onLeague,
               ),
             ),
             Expanded(

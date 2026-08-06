@@ -230,6 +230,80 @@ class _AccountScreenState extends State<AccountScreen> {
                     ],
                   ),
                 ),
+                if (game.socialEnabled && game.socialUsername.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  GlassCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.emoji_events_rounded,
+                              color: GameTheme.gold,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${game.currentLeague.emoji} ${game.currentLeague.title} Ligi',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 17,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              game.friendCode.isEmpty
+                                  ? 'Kod hazırlanıyor'
+                                  : game.friendCode,
+                              style: const TextStyle(
+                                color: GameTheme.gold,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          'Fatih adın: ${game.socialUsername}',
+                          style: const TextStyle(
+                            color: GameTheme.cyan,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Ligde Fatih adın ve oyun skorların paylaşılır; e-posta adresin yayınlanmaz. Ligden ayrılsan da adın hesabın için rezerve kalır.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () async {
+                                  setState(() => _busy = true);
+                                  final error =
+                                      await game.leaveSocialCompetition();
+                                  if (!mounted) return;
+                                  setState(() => _busy = false);
+                                  if (error != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(error)),
+                                    );
+                                  }
+                                },
+                          icon: const Icon(Icons.visibility_off_rounded),
+                          label: const Text('SOSYAL LİGDEN AYRIL'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _busy

@@ -61,6 +61,18 @@ class StatsScreen extends StatelessWidget {
         GameTheme.danger,
       ),
       (
+        'Haftalık lig puanı',
+        '${game.weeklyScore}',
+        Icons.emoji_events_rounded,
+        GameTheme.gold,
+      ),
+      (
+        'Sezon ligi',
+        '${game.currentLeague.emoji} ${game.currentLeague.title}',
+        Icons.military_tech_rounded,
+        GameTheme.violet,
+      ),
+      (
         'Açılan taç',
         '${game.crownsUnlocked}',
         Icons.workspace_premium_rounded,

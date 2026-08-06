@@ -28,6 +28,11 @@ class PrivacyScreen extends StatelessWidget {
                     'Google veya Apple ile giriş tamamen isteğe bağlıdır. Giriş yapıldığında Firebase Authentication kullanıcı kimliği, varsa ad/e-posta ve Firestore üzerinde oyun ilerlemesi işlenir. Can ve altın bulut hesabına kopyalanmaz.',
               ),
               const _PolicySection(
+                title: 'Sosyal ligler ve arkadaşlar',
+                body:
+                    'Fatihler Ligi tamamen isteğe bağlıdır. İlk katılımda kullanıcı bir kez benzersiz Fatih adı seçer; liderlik tablosunda Google/Apple hesap adı veya e-posta yerine bu ad gösterilir. Arkadaş kodu, haftalık/sezon puanı, bölüm seviyesi ve Kusursuz Fetih sayısı diğer giriş yapmış oyunculara gösterilebilir. Ligden ayrılınca sosyal profil ve arkadaş listesi silinir; Fatih adı yeniden katılımda tekrar sorulmaması ve başkası tarafından alınmaması için hesap silinene kadar rezerve kalır.',
+              ),
+              const _PolicySection(
                 title: 'Yerel oyun verileri',
                 body:
                     'Bölüm, can, altın, görevler, giriş serisi, bulunan kelimeler, ipuçları ve ayarlar cihaz üzerinde saklanır. Oyunun temel modları internet olmadan çalışır.',
@@ -45,7 +50,7 @@ class PrivacyScreen extends StatelessWidget {
               const _PolicySection(
                 title: 'Hesabı silme',
                 body:
-                    'Hesap ekranındaki “Hesabı ve bulut yedeğini sil” seçeneği Firebase kullanıcı hesabını ve Firestore bulut ilerlemesini silmek için kullanılabilir. Cihazdaki bağımsız yerel oyun kaydı uygulama verileri silinene kadar cihazda kalabilir.',
+                    'Hesap ekranındaki “Hesabı ve bulut yedeğini sil” seçeneği Firebase kullanıcı hesabını, Firestore bulut ilerlemesini, varsa kendi sosyal lig profilini/arkadaş listesini ve Fatih adı rezervasyonunu silmek için kullanılabilir. Cihazdaki bağımsız yerel oyun kaydı uygulama verileri silinene kadar cihazda kalabilir.',
               ),
               GlassCard(
                 child: Column(

@@ -1,9 +1,129 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validUsernameFields(data, uid) {
+      return data.uid == uid
+        && data.displayName is string
+        && data.displayName.size() >= 3
+        && data.displayName.size() <= 18
+        && data.normalized is string
+        && data.normalized.size() >= 3
+        && data.normalized.size() <= 18;
+    }
+
+    function socialNameMatchesReservation(uid) {
+      let owner = get(/databases/$(database)/documents/username_owners/$(uid)).data;
+      let normalized = owner.normalized;
+      let reservation = get(/databases/$(database)/documents/usernames/$(normalized)).data;
+      return owner.uid == uid
+        && owner.displayName == request.resource.data.displayName
+        && owner.normalized == request.resource.data.usernameNormalized
+        && reservation.uid == uid
+        && reservation.displayName == owner.displayName
+        && reservation.normalized == owner.normalized;
+    }
+
+    function validSocialProfile(uid) {
+      return request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 3
+        && request.resource.data.displayName.size() <= 18
+        && request.resource.data.usernameNormalized is string
+        && request.resource.data.usernameNormalized.size() >= 3
+        && request.resource.data.usernameNormalized.size() <= 18
+        && request.resource.data.friendCode is string
+        && request.resource.data.friendCode.size() <= 16
+        && request.resource.data.weekKey is string
+        && request.resource.data.weeklyScore is int
+        && request.resource.data.weeklyScore >= 0
+        && request.resource.data.weeklyScore <= 100000000
+        && request.resource.data.seasonKey is string
+        && request.resource.data.seasonScore is int
+        && request.resource.data.seasonScore >= 0
+        && request.resource.data.seasonScore <= 100000000
+        && request.resource.data.levelNumber is int
+        && request.resource.data.levelNumber >= 1
+        && request.resource.data.levelNumber <= 8000
+        && request.resource.data.perfectConquests is int
+        && request.resource.data.perfectConquests >= 0;
+    }
+
     match /players/{uid} {
-      allow read, create, update, delete: if request.auth != null
-        && request.auth.uid == uid;
+      allow read, create, update, delete: if owns(uid);
+    }
+
+    // Fatih adı hesabın için yalnız bir kez rezerve edilir. Belge kimliği
+    // normalize edilmiş addır; aynı ada iki kullanıcı transaction yarışında
+    // dahi sahip olamaz. Listeleme kapalıdır, yalnız belirli ad sorgulanabilir.
+    match /usernames/{normalized} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && validUsernameFields(request.resource.data, request.auth.uid)
+        && request.resource.data.normalized == normalized
+        && !exists(/databases/$(database)/documents/username_owners/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/username_owners/$(request.auth.uid)).data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/username_owners/$(request.auth.uid)).data.normalized == normalized
+        && getAfter(/databases/$(database)/documents/username_owners/$(request.auth.uid)).data.displayName == request.resource.data.displayName;
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // UID -> Fatih adı eşlemesi yalnız hesabın kendisine görünür. Ligden
+    // çıkınca tutulur; tam hesap silmede kullanıcı adı rezervasyonuyla birlikte
+    // silinir. Update kapalı olduğu için kullanıcı adı sonradan değiştirilemez.
+    match /username_owners/{uid} {
+      allow read: if owns(uid);
+      allow create: if owns(uid)
+        && !exists(/databases/$(database)/documents/username_owners/$(uid))
+        && validUsernameFields(request.resource.data, uid);
+      allow update: if false;
+      allow delete: if owns(uid);
+    }
+
+    // Lige katılmak isteğe bağlıdır. Bu belgelerde e-posta tutulmaz;
+    // yalnız seçilmiş Fatih adı, arkadaş kodu ve oyun skorları bulunur.
+    match /social_profiles/{uid} {
+      allow read: if signedIn();
+      allow create: if owns(uid)
+        && validSocialProfile(uid)
+        && socialNameMatchesReservation(uid);
+      allow update: if owns(uid)
+        && validSocialProfile(uid)
+        && socialNameMatchesReservation(uid)
+        && (resource.data.get('usernameNormalized', '') == ''
+          || (request.resource.data.displayName == resource.data.displayName
+            && request.resource.data.usernameNormalized == resource.data.usernameNormalized))
+        && (resource.data.weekKey != request.resource.data.weekKey
+          || request.resource.data.weeklyScore >= resource.data.weeklyScore)
+        && (resource.data.seasonKey != request.resource.data.seasonKey
+          || request.resource.data.seasonScore >= resource.data.seasonScore);
+      allow delete: if owns(uid);
+    }
+
+    match /friend_codes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /friendships/{uid}/members/{friendUid} {
+      allow read, delete: if owns(uid);
+      allow create, update: if owns(uid)
+        && request.resource.data.friendUid == friendUid
+        && friendUid != uid;
     }
   }
 }

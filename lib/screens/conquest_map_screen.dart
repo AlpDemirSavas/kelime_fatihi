@@ -40,6 +40,15 @@ class ConquestMapScreen extends StatelessWidget {
                 'Her bölge 100 bölümden oluşur. 8.000 bölümün harf çemberi imzası birbirinden farklıdır.',
                 style: TextStyle(color: Colors.white.withValues(alpha: .62)),
               ),
+              const SizedBox(height: 14),
+              _CampaignSummary(
+                completedRegions: game.campaignCompleted
+                    ? ConquestRegion.regionCount
+                    : ((game.levelNumber - 1) ~/ ConquestRegion.regionSize),
+                currentRegion: current.name,
+                totalCompleted: game.levelsCompleted,
+                crowns: game.crownsUnlocked,
+              ),
               const SizedBox(height: 18),
               for (var index = start; index <= end; index++)
                 Padding(
@@ -79,6 +88,79 @@ class ConquestMapScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CampaignSummary extends StatelessWidget {
+  const _CampaignSummary({
+    required this.completedRegions,
+    required this.currentRegion,
+    required this.totalCompleted,
+    required this.crowns,
+  });
+
+  final int completedRegions;
+  final String currentRegion;
+  final int totalCompleted;
+  final int crowns;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.all(15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🗺️', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$completedRegions/${ConquestRegion.regionCount} bölge fethedildi',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    ),
+                    Text(
+                      'Sıradaki hedef: $currentRegion',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .55),
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '👑 $crowns',
+                style: const TextStyle(
+                  color: GameTheme.gold,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 11),
+          LinearProgressIndicator(
+            value: (totalCompleted / ConquestRegion.maxLevel).clamp(0.0, 1.0).toDouble(),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(99),
+            color: GameTheme.gold,
+            backgroundColor: Colors.white.withValues(alpha: .08),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$totalCompleted/${ConquestRegion.maxLevel} bölüm • Her tamamlanan bölge haritada kalıcı fetih mührü kazanır.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: .48),
+              fontSize: 10.5,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -137,7 +219,27 @@ class _RegionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (completed)
+                if (completed) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: GameTheme.gold.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(
+                        color: GameTheme.gold.withValues(alpha: .26),
+                      ),
+                    ),
+                    child: const Text(
+                      'FETHEDİLDİ',
+                      style: TextStyle(
+                        color: GameTheme.gold,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .7,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 7),
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: .65, end: 1),
                     duration: MediaQuery.disableAnimationsOf(context)
@@ -165,8 +267,8 @@ class _RegionCard extends StatelessWidget {
                         color: GameTheme.gold,
                       ),
                     ),
-                  )
-                else
+                  ),
+                ] else
                   Icon(
                     locked ? Icons.lock_rounded : Icons.play_arrow_rounded,
                     color: region.accent,
@@ -196,9 +298,9 @@ class _RegionCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                   completed
-                      ? 'TAMAMLANDI'
+                      ? '100/100 • MÜHÜR AÇILDI'
                       : current
-                      ? '$progress/${ConquestRegion.regionSize}'
+                      ? '$progress/${ConquestRegion.regionSize} • %${(progress * 100 / ConquestRegion.regionSize).round()}'
                       : 'KİLİTLİ',
                   style: TextStyle(
                     color: region.accent,

@@ -475,7 +475,7 @@ void main() {
     );
     await controller.initialize();
 
-    expect(await storage.getInt('content_version', -1), 16);
+    expect(await storage.getInt('content_version', -1), 17);
     expect(controller.levelNumber, 102);
     expect(controller.levelsCompleted, 101);
     expect(controller.coins, 125);
@@ -489,7 +489,7 @@ void main() {
     controller.dispose();
   });
 
-  test('App Store v14 açık tahta v16 kampanyaya güvenli taşınır', () async {
+  test('App Store v14 açık tahta v17 kampanyaya güvenli taşınır', () async {
     final dictionary = DictionaryService();
     await dictionary.load();
     final storage = StorageService();
@@ -516,7 +516,7 @@ void main() {
     );
     await controller.initialize();
 
-    expect(await storage.getInt('content_version', -1), 16);
+    expect(await storage.getInt('content_version', -1), 17);
     expect(controller.levelNumber, 321);
     expect(controller.levelsCompleted, 320);
     expect(controller.coins, 777);
@@ -535,7 +535,7 @@ void main() {
     controller.dispose();
   });
 
-  test('v15 açık tahta v16 kalite kampanyasında güvenli sıfırlanır', () async {
+  test('v15 açık tahta v17 kalite kampanyasında güvenli sıfırlanır', () async {
     final dictionary = DictionaryService();
     await dictionary.load();
     final storage = StorageService();
@@ -562,7 +562,7 @@ void main() {
     );
     await controller.initialize();
 
-    expect(await storage.getInt('content_version', -1), 16);
+    expect(await storage.getInt('content_version', -1), 17);
     expect(controller.levelNumber, 777);
     expect(controller.levelsCompleted, 776);
     expect(controller.coins, 444);
@@ -573,6 +573,99 @@ void main() {
     expect(controller.hintUsedThisLevel, isFalse);
     expect(controller.mistakesThisLevel, 0);
     expect(await storage.getInt('active_level_number', -1), 777);
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+  });
+
+  test('v17 bölüm lig puanı kalıcıdır ve yeniden açılışta iki kez yazılmaz', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final storage = StorageService();
+    await storage.setInt('content_version', 17);
+
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: storage,
+      ads: AdService(),
+      purchases: _TestPurchaseService(),
+      audio: AudioService(enabled: false),
+      account: AccountService(firebaseReady: false),
+    );
+    await controller.initialize();
+    controller.foundWords.addAll(controller.currentLevel.words);
+    controller.bonusWords.addAll(const <String>['bonus1', 'bonus2']);
+
+    await controller.completeLevel();
+    expect(controller.weeklyScore, 170);
+    expect(controller.seasonScore, 170);
+
+    controller.ads.dispose();
+    controller.purchases.dispose();
+    controller.account.dispose();
+    await controller.audio.dispose();
+    controller.dispose();
+
+    final reopened = GameController(
+      dictionary: dictionary,
+      storage: storage,
+      ads: AdService(),
+      purchases: _TestPurchaseService(),
+      audio: AudioService(enabled: false),
+      account: AccountService(firebaseReady: false),
+    );
+    await reopened.initialize();
+    expect(reopened.weeklyScore, 170);
+    expect(reopened.seasonScore, 170);
+
+    reopened.ads.dispose();
+    reopened.purchases.dispose();
+    reopened.account.dispose();
+    await reopened.audio.dispose();
+    reopened.dispose();
+  });
+
+  test('v16 açık tahta v17 sosyal/UI güncellemesinde aynen korunur', () async {
+    final dictionary = DictionaryService();
+    await dictionary.load();
+    final storage = StorageService();
+    final level = dictionary.buildLevel(321);
+    final found = level.words.take(2).toList();
+
+    await storage.setInt('content_version', 16);
+    await storage.setInt('level_number', 321);
+    await storage.setInt('levels_completed', 320);
+    await storage.setInt('coins', 777);
+    await storage.setInt('hearts', 4);
+    await storage.setInt('active_level_number', 321);
+    await storage.setStringList('found_words', found);
+    await storage.setStringList('bonus_words', const <String>['bonus']);
+    await storage.setBool('hint_used_level', true);
+    await storage.setInt('mistakes_this_level', 2);
+    await storage.setString('hints_json', '{}');
+
+    final controller = GameController(
+      dictionary: dictionary,
+      storage: storage,
+      ads: AdService(),
+      purchases: _TestPurchaseService(),
+      audio: AudioService(enabled: false),
+      account: AccountService(firebaseReady: false),
+    );
+    await controller.initialize();
+
+    expect(await storage.getInt('content_version', -1), 17);
+    expect(controller.levelNumber, 321);
+    expect(controller.levelsCompleted, 320);
+    expect(controller.coins, 777);
+    expect(controller.hearts, 4);
+    expect(controller.foundWords, containsAll(found));
+    expect(controller.bonusWords, contains('bonus'));
+    expect(controller.hintUsedThisLevel, isTrue);
+    expect(controller.mistakesThisLevel, 2);
 
     controller.ads.dispose();
     controller.purchases.dispose();

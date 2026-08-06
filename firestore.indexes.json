@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "social_profiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "weekKey", "order": "ASCENDING" },
+        { "fieldPath": "weeklyScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_profiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "seasonKey", "order": "ASCENDING" },
+        { "fieldPath": "seasonScore", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -655,19 +655,120 @@ class _ConquestScreenState extends State<ConquestScreen>
     required String title,
     required String message,
   }) async {
+    final game = GameScope.of(context);
+    final accent = game.currentRegion.accent;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('DEVAM'),
+      builder: (dialogContext) {
+        final reduceMotion = MediaQuery.disableAnimationsOf(dialogContext);
+        final content = Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF163655).withValues(alpha: .98),
+                  const Color(0xFF09192A).withValues(alpha: .99),
+                ],
+              ),
+              border: Border.all(color: accent.withValues(alpha: .34)),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: .14),
+                  blurRadius: 36,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withValues(alpha: .12),
+                    border: Border.all(color: accent.withValues(alpha: .3)),
+                  ),
+                  child: const Text('👑', style: TextStyle(fontSize: 40)),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .76),
+                    height: 1.4,
+                  ),
+                ),
+                if (game.socialEnabled) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: GameTheme.gold.withValues(alpha: .08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: GameTheme.gold.withValues(alpha: .18),
+                      ),
+                    ),
+                    child: Text(
+                      '${game.currentLeague.emoji} ${game.currentLeague.title} Ligi • Hafta ${game.weeklyScore} puan',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: GameTheme.gold,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: const Text('DEVAM ET'),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+        if (reduceMotion) return content;
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: .9, end: 1),
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutBack,
+          builder: (context, scale, child) => Transform.scale(
+            scale: scale,
+            child: Opacity(opacity: scale.clamp(0.0, 1.0).toDouble(), child: child),
+          ),
+          child: content,
+        );
+      },
     );
   }
 
@@ -676,71 +777,143 @@ class _ConquestScreenState extends State<ConquestScreen>
     String? rewardMessage,
     String? perfectMessage,
   }) async {
+    final game = GameScope.of(context);
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('BÖLGE FETHEDİLDİ!'),
-        content: TweenAnimationBuilder<double>(
-          tween: Tween(begin: .72, end: 1),
-          duration: MediaQuery.disableAnimationsOf(dialogContext)
-              ? Duration.zero
-              : const Duration(milliseconds: 650),
+      builder: (dialogContext) {
+        final reduceMotion = MediaQuery.disableAnimationsOf(dialogContext);
+        final card = Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  region.accent.withValues(alpha: .22),
+                  const Color(0xFF0B1B2D).withValues(alpha: .99),
+                ],
+              ),
+              border: Border.all(color: region.accent.withValues(alpha: .42)),
+              boxShadow: [
+                BoxShadow(
+                  color: region.accent.withValues(alpha: .22),
+                  blurRadius: 44,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: GameTheme.gold.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: const Text(
+                    'FETİH MÜHRÜ AÇILDI',
+                    style: TextStyle(
+                      color: GameTheme.gold,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(region.emoji, style: const TextStyle(fontSize: 72)),
+                const SizedBox(height: 8),
+                const Text(
+                  'BÖLGE FETHEDİLDİ!',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  region.name,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: region.accent,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '100/100 bölüm tamamlandı. Bu bölgenin fetih mührü artık haritada kalıcı.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white.withValues(alpha: .7)),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ResultMetric(
+                        icon: '👑',
+                        label: 'Taç',
+                        value: '${game.crownsUnlocked}',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ResultMetric(
+                        icon: '🏆',
+                        label: 'Kusursuz',
+                        value: '${game.perfectConquests}',
+                      ),
+                    ),
+                  ],
+                ),
+                if (rewardMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Bölge ödülü: $rewardMessage',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: GameTheme.gold,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+                if (perfectMessage != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '🏆 Kusursuz Fetih: $perfectMessage',
+                    style: const TextStyle(
+                      color: GameTheme.mint,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.flag_rounded),
+                    label: const Text('YENİ BÖLGEYE İLERLE'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (reduceMotion) return card;
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: .76, end: 1),
+          duration: const Duration(milliseconds: 650),
           curve: Curves.easeOutBack,
           builder: (context, scale, child) => Transform.scale(
             scale: scale,
             child: child,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(region.emoji, style: const TextStyle(fontSize: 68)),
-              const SizedBox(height: 8),
-              Text(
-                region.name,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: region.accent,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '100 bölümlük bölge tamamlandı. Haritada yeni fetih mührün açıldı.',
-                textAlign: TextAlign.center,
-              ),
-              if (rewardMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Bölge ödülü: $rewardMessage',
-                  style: const TextStyle(
-                    color: GameTheme.gold,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-              if (perfectMessage != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  '🏆 Kusursuz Fetih: $perfectMessage',
-                  style: const TextStyle(
-                    color: GameTheme.mint,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(dialogContext),
-            icon: const Icon(Icons.flag_rounded),
-            label: const Text('YENİ BÖLGEYE İLERLE'),
-          ),
-        ],
-      ),
+          child: card,
+        );
+      },
     );
   }
 
@@ -1183,6 +1356,44 @@ class _LastWordBanner extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ResultMetric extends StatelessWidget {
+  const _ResultMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final String icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: .08)),
+      ),
+      child: Column(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 3),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: .48),
+              fontSize: 9.5,
+            ),
+          ),
+        ],
       ),
     );
   }
